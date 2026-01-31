@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Pendle YT Insights Dashboard</title>
+</head>
+<body>
+
+<h2>Pendle YT Insights Dashboard</h2>
+<p>Find underpriced and overpriced Yield Tokens</p>
+
+<div id="yt-table">Loading...</div>
+
+<script>
+async function loadYTs() {
+  const res = await fetch(
+    "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_latest_yt_overview"
+  );
+  const json = await res.json();
+
+  if (!json.success || json.count === 0) {
+    document.getElementById("yt-table").innerText =
+      "No data available";
+    return;
+  }
+
+  let html = `
+    <table border="1" cellpadding="6" cellspacing="0" style="width:100%;font-size:14px">
+      <tr>
+        <th>Chain</th>
+        <th>YT Address</th>
+        <th>Expiry</th>
+        <th>UY %</th>
+        <th>IY %</th>
+        <th>Net %</th>
+        <th>Net APY %</th>
+      </tr>
+  `;
+
+  for (const row of json.data) {
+    const net = (row.net_yield * 100).toFixed(2);
+    const color = row.net_yield >= 0 ? "green" : "red";
+
+    html += `
+      <tr>
+        <td>${row.chain_id}</td>
+        <td style="font-size:11px">${row.yt_address}</td>
+        <td>${row.expiry.slice(0,10)}</td>
+        <td>${(row.underlying_yield * 100).toFixed(2)}</td>
+        <td>${(row.implied_yield * 100).toFixed(2)}</td>
+        <td style="color:${color}">${net}</td>
+        <td>${(row.net_apy_to_maturity * 100).toFixed(2)}</td>
+      </tr>
+    `;
+  }
+
+  html += "</table>";
+  document.getElementById("yt-table").innerHTML = html;
+}
+
+loadYTs();
+</script>
+
+</body>
+</html>
+
