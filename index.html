@@ -1,80 +1,149 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Pendle YT Insights Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pendle YT Insights</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0b0e14;
+      color: #e6e6e6;
+    }
+
+    header {
+      padding: 16px;
+      font-size: 18px;
+      font-weight: 600;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: #111827;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #9ca3af;
+    }
+
+    td {
+      padding: 14px;
+      font-size: 14px;
+      border-top: 1px solid #1f2937;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr:hover {
+      background: #111827;
+    }
+
+    .yield-positive {
+      color: #22c55e;
+      font-weight: 600;
+    }
+
+    .apy {
+      font-weight: 700;
+    }
+
+    .center {
+      text-align: right;
+    }
+
+    .loading {
+      padding: 20px;
+      text-align: center;
+      color: #9ca3af;
+    }
+  </style>
 </head>
+
 <body>
+  <header>Pendle YT Insights</header>
 
-<h2>Pendle YT Insights Dashboard</h2>
-<p>Find underpriced and overpriced Yield Tokens</p>
+  <div id="loading" class="loading">Loading YTs…</div>
 
-<div id="yt-table">Loading...</div>
+  <table id="ytTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>YT</th>
+        <th class="center">Current Yield</th>
+        <th class="center">Net APY</th>
+      </tr>
+    </thead>
+    <tbody id="ytBody"></tbody>
+  </table>
 
-<script>
-async function loadYTs() {
-  try {
-    const res = await fetch(
-      "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_latest_yt_overview"
-    );
+  <script>
+    const API =
+      "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_latest_yt_overview";
 
-    if (!res.ok) {
-      throw new Error("HTTP " + res.status);
+    function shortYT(addr) {
+      return addr.slice(0, 4) + "..." + addr.slice(-3);
     }
 
-    const json = await res.json();
-    console.log("API response:", json);
-
-    if (!json.success || json.count === 0) {
-      document.getElementById("yt-table").innerText =
-        "No data available";
-      return;
+    function pct(num) {
+      return (Number(num) * 100).toFixed(2) + "%";
     }
 
-    let html = `
-      <table border="1" cellpadding="6" cellspacing="0" style="width:100%;font-size:14px">
-        <tr>
-          <th>Chain</th>
-          <th>YT Address</th>
-          <th>Expiry</th>
-          <th>UY %</th>
-          <th>IY %</th>
-          <th>Net %</th>
-          <th>Net APY %</th>
-        </tr>
-    `;
+    async function loadData() {
+      try {
+        const res = await fetch(API);
+        const json = await res.json();
 
-    for (const row of json.data) {
-      const net = (row.net_yield * 100).toFixed(2);
-      const color = row.net_yield >= 0 ? "green" : "red";
+        if (!json.success) throw new Error("API error");
 
-      html += `
-        <tr>
-          <td>${row.chain_id}</td>
-          <td style="font-size:11px">${row.yt_address}</td>
-          <td>${row.expiry.slice(0,10)}</td>
-          <td>${(row.underlying_yield * 100).toFixed(2)}</td>
-          <td>${(row.implied_yield * 100).toFixed(2)}</td>
-          <td style="color:${color}">${net}</td>
-          <td>${(row.net_apy_to_maturity * 100).toFixed(2)}</td>
-        </tr>
-      `;
+        const rows = json.data;
+
+        // Sort by Net APY DESC (extra safety)
+        rows.sort(
+          (a, b) =>
+            Number(b.net_apy_to_maturity) -
+            Number(a.net_apy_to_maturity)
+        );
+
+        const body = document.getElementById("ytBody");
+
+        for (const r of rows) {
+          const tr = document.createElement("tr");
+
+          tr.onclick = () => {
+            window.location.href =
+              `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
+          };
+
+          tr.innerHTML = `
+            <td>${shortYT(r.yt_address)}</td>
+            <td class="center yield-positive">${pct(r.net_yield)}</td>
+            <td class="center apy">${pct(r.net_apy_to_maturity)}</td>
+          `;
+
+          body.appendChild(tr);
+        }
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("ytTable").style.display = "table";
+      } catch (e) {
+        document.getElementById("loading").innerText =
+          "Failed to load data";
+      }
     }
 
-    html += "</table>";
-    document.getElementById("yt-table").innerHTML = html;
-
-  } catch (err) {
-    console.error(err);
-    document.getElementById("yt-table").innerText =
-      "Failed to load data. Check console.";
-  }
-}
-
-loadYTs();
-</script>
-  
-
+    loadData();
+  </script>
 </body>
 </html>
-
