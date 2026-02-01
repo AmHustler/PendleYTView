@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YT Details</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0b0e14;
+      color: #e6e6e6;
+    }
+
+    header {
+      padding: 16px;
+      font-size: 18px;
+      font-weight: 600;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    .container {
+      padding: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    td {
+      padding: 12px 0;
+      border-bottom: 1px solid #1f2937;
+      font-size: 14px;
+    }
+
+    td.label {
+      color: #9ca3af;
+      width: 45%;
+    }
+
+    td.value {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .positive {
+      color: #22c55e;
+    }
+
+    .chart {
+      margin-top: 24px;
+      padding: 20px;
+      border: 1px dashed #374151;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+
+<body>
+  <header>YT Details</header>
+
+  <div class="container">
+    <div id="loading" class="loading">Loading YT data…</div>
+
+    <table id="detailsTable" style="display:none;">
+      <tbody id="detailsBody"></tbody>
+    </table>
+
+    <div class="chart">
+      📈 Net Yield chart coming next
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const chainId = params.get("chain_id");
+    const ytAddress = params.get("yt_address");
+
+    if (!chainId || !ytAddress) {
+      document.getElementById("loading").innerText =
+        "Invalid YT parameters";
+      throw new Error("Missing params");
+    }
+
+    const API =
+      `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_latest_yt_snapshot?chain_id=${chainId}&yt_address=${ytAddress}`;
+
+    function shortYT(addr) {
+      return addr.slice(0, 4) + "..." + addr.slice(-3);
+    }
+
+    function pct(num) {
+      return (Number(num) * 100).toFixed(2) + "%";
+    }
+
+    function chainName(id) {
+      if (id === "1") return "Ethereum";
+      if (id === "42161") return "Arbitrum";
+      if (id === "8453") return "Base";
+      return `Chain ${id}`;
+    }
+
+    function daysToExpiry(expiry) {
+      const now = new Date();
+      const exp = new Date(expiry);
+      return Math.max(
+        Math.ceil((exp - now) / (1000 * 60 * 60 * 24)),
+        0
+      );
+    }
+
+    async function loadDetails() {
+      const res = await fetch(API);
+      const json = await res.json();
+
+      if (!json.success || json.count === 0) {
+        document.getElementById("loading").innerText =
+          "YT data not found";
+        return;
+      }
+
+      const r = json.data[0];
+      const body = document.getElementById("detailsBody");
+
+      const rows = [
+        ["YT Name", shortYT(r.yt_address)],
+        ["Chain", chainName(String(r.chain_id))],
+        ["YT Address", r.yt_address],
+        ["Expiry Date", new Date(r.expiry).toUTCString()],
+        ["Time to Expiry", `${daysToExpiry(r.expiry)} days`],
+        ["Underlying Yield", pct(r.underlying_yield)],
+        ["Implied Yield", pct(r.implied_yield)],
+        ["Current Yield", pct(r.net_yield)],
+        ["Net APY", pct(r.net_apy_to_maturity)],
+        ["Last Updated", new Date(r.snapshot_time).toUTCString()],
+      ];
+
+      for (const [label, value] of rows) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="label">${label}</td>
+          <td class="value ${
+            label.includes("Yield") || label.includes("APY")
+              ? "positive"
+              : ""
+          }">${value}</td>
+        `;
+        body.appendChild(tr);
+      }
+
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("detailsTable").style.display = "table";
+    }
+
+    loadDetails();
+  </script>
+</body>
+</html>
