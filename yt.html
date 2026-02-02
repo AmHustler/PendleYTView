@@ -64,8 +64,32 @@
       color: #9ca3af;
     }
   </style>
-</head>
+ .chart-container {
+  margin-top: 24px;
+}
 
+.chart-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.chart-tabs button {
+  flex: 1;
+  padding: 8px;
+  background: #111827;
+  color: #9ca3af;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.chart-tabs button.active {
+  color: #22c55e;
+  border-color: #22c55e;
+} 
+</head>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <body>
   <header>YT Details</header>
 
@@ -76,8 +100,15 @@
       <tbody id="detailsBody"></tbody>
     </table>
 
-    <div class="chart">
-      📈 Net Yield chart coming next
+    <div class="chart-container">
+  <div class="chart-tabs">
+    <button data-range="1d" class="active">1D</button>
+    <button data-range="1w">1W</button>
+    <button data-range="1m">1M</button>
+    <button data-range="all">ALL</button>
+  </div>
+
+  <canvas id="netYieldChart"></canvas>
     </div>
   </div>
 
@@ -163,6 +194,78 @@
     }
 
     loadDetails();
+    let chart;
+
+async function loadChart(range) {
+  let bucket = "hour";
+
+  if (range === "1m") bucket = "day";
+  if (range === "all") bucket = "week";
+
+  const url =
+    `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed` +
+    `?chain_id=${chainId}&yt_address=${ytAddress}&bucket=${bucket}`;
+
+  const res = await fetch(url);
+  const json = await res.json();
+
+  if (!json.success || json.count === 0) return;
+
+  const labels = json.data.map(d =>
+    new Date(d.bucket_time).toLocaleDateString()
+  );
+
+  const values = json.data.map(d =>
+    (Number(d.net_yield) * 100).toFixed(4)
+  );
+
+  if (chart) chart.destroy();
+
+  const ctx = document.getElementById("netYieldChart");
+
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Net Yield (%)",
+        data: values,
+        borderColor: "#22c55e",
+        backgroundColor: "rgba(34,197,94,0.1)",
+        tension: 0.3,
+        fill: true,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: v => v + "%",
+          },
+        },
+      },
+    },
+  });
+}
+
+// Tab handling
+document.querySelectorAll(".chart-tabs button").forEach(btn => {
+  btn.onclick = () => {
+    document
+      .querySelectorAll(".chart-tabs button")
+      .forEach(b => b.classList.remove("active"));
+
+    btn.classList.add("active");
+    loadChart(btn.dataset.range);
+  };
+});
+
+// Initial load
+loadChart("1w");
   </script>
 </body>
 </html>
