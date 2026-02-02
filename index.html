@@ -65,6 +65,11 @@ td.value.muted {
       font-weight: 600;
     }
 
+    .yield-negative {
+  color: #ef4444;
+  font-weight: 600;
+    }
+
     .apy {
       font-weight: 700;
     }
@@ -87,11 +92,37 @@ tr {
 tr:hover {
   background: rgba(255, 255, 255, 0.04);
 }
+    #chainFilters button {
+  flex: 1;
+  padding: 8px;
+  background: #0f172a;
+  color: #9ca3af;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+#chainFilters button.active {
+  color: #22c55e;
+  border-color: #22c55e;
+}
   </style>
 </head>
 
 <body>
-  <header>Pendle YT Insights</header>
+  <header>
+  Pendle YT Insights
+  <div id="lastUpdated" style="font-size:12px;color:#9ca3af;margin-top:4px;">
+    Last updated: —
+  </div>
+  </header>
+
+  <div id="chainFilters" style="padding: 12px; display: flex; gap: 8px;">
+  <button data-chain="all">All</button>
+  <button data-chain="1">Ethereum</button>
+  <button data-chain="42161">Arbitrum</button>
+  <button data-chain="8453">Base</button>
+  </div>
 
   <div id="loading" class="loading">Loading YTs…</div>
 
@@ -125,7 +156,67 @@ tr:hover {
 
         if (!json.success) throw new Error("API error");
 
-        const rows = json.data;
+        let rows = json.data;
+        // ---- Last updated indicator ----
+const latestTime = Math.max(
+  ...rows.map(r => new Date(r.snapshot_time).getTime())
+);
+
+const minsAgo = Math.floor(
+  (Date.now() - latestTime) / (1000 * 60)
+);
+
+document.getElementById("lastUpdated").innerText =
+  `Last updated: ${minsAgo} min ago`;
+        let activeChain = "all";
+
+document.querySelectorAll("#chainFilters button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("#chainFilters button")
+      .forEach(b => b.classList.remove("active"));
+
+    btn.classList.add("active");
+    activeChain = btn.dataset.chain;
+    renderTable();
+  };
+});
+
+function renderTable() {
+  const body = document.getElementById("ytBody");
+  body.innerHTML = "";
+
+  let filtered = rows;
+
+  if (activeChain !== "all") {
+    filtered = rows.filter(
+      r => String(r.chain_id) === activeChain
+    );
+  }
+
+  filtered
+    .sort((a, b) =>
+      Number(b.net_apy_to_maturity) -
+      Number(a.net_apy_to_maturity)
+    )
+    .forEach(r => {
+      const tr = document.createElement("tr");
+
+      tr.onclick = () => {
+        window.location.href =
+          `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
+      };
+
+      tr.innerHTML = `
+        <td>${shortYT(r.yt_address)}</td>
+        <td class="center ${
+          Number(r.net_yield) >= 0 ? "yield-positive" : "yield-negative"
+        }">${pct(r.net_yield)}</td>
+        <td class="center apy">${pct(r.net_apy_to_maturity)}</td>
+      `;
+
+      body.appendChild(tr);
+    });
+}
 
         // Sort by Net APY DESC (extra safety)
         rows.sort(
@@ -136,9 +227,6 @@ tr:hover {
 
         const body = document.getElementById("ytBody");
 
-        for (const r of rows) {
-          const tr = document.createElement("tr");
-
           tr.onclick = () => {
             window.location.href =
               `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
@@ -146,7 +234,9 @@ tr:hover {
 
           tr.innerHTML = `
             <td>${shortYT(r.yt_address)}</td>
-            <td class="center yield-positive">${pct(r.net_yield)}</td>
+            <td class="center ${Number(r.net_yield) >= 0 ? "yield-positive" : "yield-negative"}">
+  ${pct(r.net_yield)}
+</td>
             <td class="center apy">${pct(r.net_apy_to_maturity)}</td>
           `;
 
@@ -160,6 +250,8 @@ tr:hover {
           "Failed to load data";
       }
     }
+    renderTable();
+document.querySelector('#chainFilters button[data-chain="all"]').classList.add("active");
 
     loadData();
   </script>
