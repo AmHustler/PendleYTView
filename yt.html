@@ -95,13 +95,35 @@
       border-color: #22c55e;
       background: #020617;
     }
+    .header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 1px solid #1f2937;
+}
+
+.header .back {
+  font-size: 20px;
+  cursor: pointer;
+  color: #9ca3af;
+}
+
+.header .back:active {
+  color: #22c55e;
+}
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-  <header>YT Details</header>
+  <header class="header">
+  <span class="back" onclick="history.back()">←</span>
+  <span class="title">YT Details</span>
+  </header>
 
   <div class="container">
     <div id="loading" class="loading">Loading YT data…</div>
