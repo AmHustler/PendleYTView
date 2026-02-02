@@ -13,11 +13,24 @@
       color: #e6e6e6;
     }
 
-    header {
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       padding: 16px;
       font-size: 18px;
       font-weight: 600;
       border-bottom: 1px solid #1f2937;
+    }
+
+    .header .back {
+      font-size: 20px;
+      cursor: pointer;
+      color: #9ca3af;
+    }
+
+    .header .back:active {
+      color: #22c55e;
     }
 
     .container {
@@ -50,7 +63,6 @@
       color: #22c55e;
     }
 
-    /* 🔥 Emphasize Net APY */
     tr.net-apy td.value {
       font-size: 16px;
       font-weight: 700;
@@ -59,7 +71,7 @@
 
     .loading {
       text-align: center;
-      padding: 20px;
+      padding: 24px;
       color: #9ca3af;
     }
 
@@ -95,35 +107,16 @@
       border-color: #22c55e;
       background: #020617;
     }
-    .header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  font-size: 18px;
-  font-weight: 600;
-  border-bottom: 1px solid #1f2937;
-}
-
-.header .back {
-  font-size: 20px;
-  cursor: pointer;
-  color: #9ca3af;
-}
-
-.header .back:active {
-  color: #22c55e;
-}
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-  <header class="header">
-  <span class="back" onclick="history.back()">←</span>
-  <span class="title">YT Details</span>
-  </header>
+  <div class="header">
+    <span class="back" onclick="history.back()">←</span>
+    <span>YT Details</span>
+  </div>
 
   <div class="container">
     <div id="loading" class="loading">Loading YT data…</div>
@@ -143,6 +136,9 @@
       </div>
 
       <canvas id="netYieldChart"></canvas>
+      <div id="chartEmpty" class="loading" style="display:none;">
+        Historical data will appear here once enough snapshots are collected.
+      </div>
     </div>
   </div>
 
@@ -156,7 +152,7 @@
       throw new Error("Missing params");
     }
 
-    const API =
+    const SNAPSHOT_API =
       `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_latest_yt_snapshot` +
       `?chain_id=${chainId}&yt_address=${ytAddress}`;
 
@@ -182,18 +178,9 @@
     }
 
     async function loadDetails() {
-      const res = await fetch(API);
+      const res = await fetch(SNAPSHOT_API);
       const json = await res.json();
-    // ---- Empty / insufficient data handling ----
-    if (!json.success || !json.data || json.data.length < 2) {
-      const container = document.querySelector(".chart-container");
-      container.innerHTML = `
-     <div class="loading">
-      Historical data will appear here once enough snapshots are collected.
-     </div>
-     `;
-     return;
-     }
+
       if (!json.success || json.count === 0) {
         document.getElementById("loading").innerText = "YT data not found";
         return;
@@ -242,13 +229,28 @@
       if (range === "all") bucket = "week";
 
       const url =
-        `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed` +
-        `?chain_id=${chainId}&yt_address=${ytAddress}&bucket=${bucket}`;
+        `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          yt_address: ytAddress,
+          chain_id: chainId,
+          timeframe: bucket,
+        }),
+      });
+
       const json = await res.json();
-      
-      if (!json.success || json.count === 0) return;
+
+      if (!json.success || json.data.length < 2) {
+        document.getElementById("netYieldChart").style.display = "none";
+        document.getElementById("chartEmpty").style.display = "block";
+        return;
+      }
+
+      document.getElementById("chartEmpty").style.display = "none";
+      document.getElementById("netYieldChart").style.display = "block";
 
       const labels = json.data.map(d =>
         new Date(d.bucket_time).toLocaleDateString()
@@ -265,7 +267,6 @@
         data: {
           labels,
           datasets: [{
-            label: "Net Yield (%)",
             data: values,
             borderColor: "#22c55e",
             backgroundColor: "rgba(34,197,94,0.1)",
@@ -277,11 +278,9 @@
           responsive: true,
           plugins: { legend: { display: false } },
           scales: {
-            y: {
-              ticks: { callback: v => v + "%" }
-            }
-          }
-        }
+            y: { ticks: { callback: v => v + "%" } },
+          },
+        },
       });
     }
 
