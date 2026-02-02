@@ -252,13 +252,16 @@
       document.getElementById("chartEmpty").style.display = "none";
       document.getElementById("netYieldChart").style.display = "block";
 
-      const labels = json.data.map(d =>
-        new Date(d.bucket_time).toLocaleDateString()
-      );
+      // Chart.js expects oldest → newest
+const ordered = [...json.data].reverse();
 
-      const values = json.data.map(d =>
-        (Number(d.net_yield) * 100).toFixed(4)
-      );
+const labels = ordered.map(d =>
+  new Date(d.bucket_time).toLocaleDateString()
+);
+
+const values = ordered.map(d =>
+  (Number(d.net_yield) * 100).toFixed(4)
+);
 
       if (chart) chart.destroy();
 
