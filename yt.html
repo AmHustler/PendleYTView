@@ -43,9 +43,17 @@
     td.value {
       text-align: right;
       font-weight: 600;
+      color: #e5e7eb;
     }
 
     .positive {
+      color: #22c55e;
+    }
+
+    /* 🔥 Emphasize Net APY */
+    tr.net-apy td.value {
+      font-size: 16px;
+      font-weight: 700;
       color: #22c55e;
     }
 
@@ -55,10 +63,15 @@
       color: #9ca3af;
     }
 
-    /* ===== Chart styles ===== */
-
     .chart-container {
-      margin-top: 24px;
+      margin-top: 28px;
+    }
+
+    .chart-title {
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #9ca3af;
+      text-align: center;
     }
 
     .chart-tabs {
@@ -70,7 +83,7 @@
     .chart-tabs button {
       flex: 1;
       padding: 8px;
-      background: #111827;
+      background: #0f172a;
       color: #9ca3af;
       border: 1px solid #1f2937;
       border-radius: 6px;
@@ -80,8 +93,11 @@
     .chart-tabs button.active {
       color: #22c55e;
       border-color: #22c55e;
+      background: #020617;
     }
   </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -95,6 +111,8 @@
     </table>
 
     <div class="chart-container">
+      <div class="chart-title">Net Yield History</div>
+
       <div class="chart-tabs">
         <button data-range="1d" class="active">1D</button>
         <button data-range="1w">1W</button>
@@ -106,9 +124,6 @@
     </div>
   </div>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <script>
     const params = new URLSearchParams(window.location.search);
     const chainId = params.get("chain_id");
@@ -119,12 +134,9 @@
       throw new Error("Missing params");
     }
 
-    const SNAPSHOT_API =
+    const API =
       `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_latest_yt_snapshot` +
       `?chain_id=${chainId}&yt_address=${ytAddress}`;
-
-    const HISTORY_API =
-      `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed`;
 
     function shortYT(addr) {
       return addr.slice(0, 4) + "..." + addr.slice(-3);
@@ -144,14 +156,11 @@
     function daysToExpiry(expiry) {
       const now = new Date();
       const exp = new Date(expiry);
-      return Math.max(
-        Math.ceil((exp - now) / (1000 * 60 * 60 * 24)),
-        0
-      );
+      return Math.max(Math.ceil((exp - now) / (1000 * 60 * 60 * 24)), 0);
     }
 
     async function loadDetails() {
-      const res = await fetch(SNAPSHOT_API);
+      const res = await fetch(API);
       const json = await res.json();
 
       if (!json.success || json.count === 0) {
@@ -163,7 +172,7 @@
       const body = document.getElementById("detailsBody");
 
       const rows = [
-        ["YT Name", shortYT(r.yt_address)],
+        ["YT Token", shortYT(r.yt_address)],
         ["Chain", chainName(String(r.chain_id))],
         ["YT Address", r.yt_address],
         ["Expiry Date", new Date(r.expiry).toUTCString()],
@@ -177,12 +186,12 @@
 
       for (const [label, value] of rows) {
         const tr = document.createElement("tr");
+        if (label === "Net APY") tr.classList.add("net-apy");
+
         tr.innerHTML = `
           <td class="label">${label}</td>
           <td class="value ${
-            label.includes("Yield") || label.includes("APY")
-              ? "positive"
-              : ""
+            label.includes("Yield") || label.includes("APY") ? "positive" : ""
           }">${value}</td>
         `;
         body.appendChild(tr);
@@ -192,6 +201,8 @@
       document.getElementById("detailsTable").style.display = "table";
     }
 
+    loadDetails();
+
     let chart;
 
     async function loadChart(range) {
@@ -200,11 +211,11 @@
       if (range === "all") bucket = "week";
 
       const url =
-        `${HISTORY_API}?chain_id=${chainId}&yt_address=${ytAddress}&bucket=${bucket}`;
+        `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed` +
+        `?chain_id=${chainId}&yt_address=${ytAddress}&bucket=${bucket}`;
 
       const res = await fetch(url);
       const json = await res.json();
-
       if (!json.success || json.count === 0) return;
 
       const labels = json.data.map(d =>
@@ -222,9 +233,10 @@
         data: {
           labels,
           datasets: [{
+            label: "Net Yield (%)",
             data: values,
             borderColor: "#22c55e",
-            backgroundColor: "rgba(34,197,94,0.12)",
+            backgroundColor: "rgba(34,197,94,0.1)",
             tension: 0.3,
             fill: true,
           }],
@@ -234,25 +246,22 @@
           plugins: { legend: { display: false } },
           scales: {
             y: {
-              ticks: { callback: v => v + "%" },
-            },
-          },
-        },
+              ticks: { callback: v => v + "%" }
+            }
+          }
+        }
       });
     }
 
     document.querySelectorAll(".chart-tabs button").forEach(btn => {
       btn.onclick = () => {
-        document
-          .querySelectorAll(".chart-tabs button")
+        document.querySelectorAll(".chart-tabs button")
           .forEach(b => b.classList.remove("active"));
-
         btn.classList.add("active");
         loadChart(btn.dataset.range);
       };
     });
 
-    loadDetails();
     loadChart("1w");
   </script>
 </body>
