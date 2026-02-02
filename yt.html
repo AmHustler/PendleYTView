@@ -184,7 +184,16 @@
     async function loadDetails() {
       const res = await fetch(API);
       const json = await res.json();
-
+    // ---- Empty / insufficient data handling ----
+    if (!json.success || !json.data || json.data.length < 2) {
+      const container = document.querySelector(".chart-container");
+      container.innerHTML = `
+     <div class="loading">
+      Historical data will appear here once enough snapshots are collected.
+     </div>
+     `;
+     return;
+     }
       if (!json.success || json.count === 0) {
         document.getElementById("loading").innerText = "YT data not found";
         return;
@@ -238,6 +247,7 @@
 
       const res = await fetch(url);
       const json = await res.json();
+      
       if (!json.success || json.count === 0) return;
 
       const labels = json.data.map(d =>
