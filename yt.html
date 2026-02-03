@@ -190,7 +190,7 @@
       const body = document.getElementById("detailsBody");
 
       const rows = [
-        ["YT Token", shortYT(r.yt_address)],
+        ["YT Token", r.yt_name ?? shortYT(r.yt_address)],
         ["Chain", chainName(String(r.chain_id))],
         ["YT Address", r.yt_address],
         ["Expiry Date", new Date(r.expiry).toUTCString()],
