@@ -188,7 +188,7 @@
               };
 
               tr.innerHTML = `
-                <td>${shortYT(r.yt_address)}</td>
+                <td>${r.yt_name ?? shortYT(r.yt_address)}</td>
                 <td class="center ${
                   Number(r.net_yield) >= 0 ? "yield-positive" : "yield-negative"
                 }">${pct(r.net_yield)}</td>
