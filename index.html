@@ -108,12 +108,7 @@
   <div class="controls">
     <label>
       Chain:
-      <select id="chainSelect">
-        <option value="all">All</option>
-        <option value="1">Ethereum</option>
-        <option value="42161">Arbitrum</option>
-        <option value="8453">Base</option>
-      </select>
+      <select id="chainSelect"></select>
     </label>
   </div>
 
@@ -142,6 +137,16 @@
       return (Number(num) * 100).toFixed(2) + "%";
     }
 
+    const CHAIN_NAMES = {
+  1: "Ethereum",
+  56: "BNB Chain",
+  42161: "Arbitrum",
+  8453: "Base",
+  146: "Chain 146",
+  999: "Chain 999",
+  9745: "Chain 9745",
+};
+    
     async function loadData() {
       try {
         const res = await fetch(API);
@@ -162,6 +167,27 @@
           `Last updated: ${minsAgo} min ago`;
 
         const select = document.getElementById("chainSelect");
+
+// ---- Build chain selector dynamically ----
+const chainIds = Array.from(
+  new Set(rows.map(r => r.chain_id))
+).sort((a, b) => a - b);
+
+select.innerHTML = "";
+
+// All option
+const allOpt = document.createElement("option");
+allOpt.value = "all";
+allOpt.textContent = "All";
+select.appendChild(allOpt);
+
+// Chain options
+chainIds.forEach(id => {
+  const opt = document.createElement("option");
+  opt.value = String(id);
+  opt.textContent = CHAIN_NAMES[id] ?? `Chain ${id}`;
+  select.appendChild(opt);
+});
 
         function renderTable() {
           const body = document.getElementById("ytBody");
@@ -201,8 +227,7 @@
           document.getElementById("loading").style.display = "none";
           document.getElementById("ytTable").style.display = "table";
         }
-
-        select.onchange = renderTable;
+        
         renderTable();
       } catch (e) {
         document.getElementById("loading").innerText =
