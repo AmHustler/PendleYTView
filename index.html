@@ -150,14 +150,20 @@
   async function loadData() {
     try {
       const res = await fetch(API);
-      const json = await res.json();
-      if (!json.success) throw new Error("API error");
+const json = await res.json();
 
-      // 🔑 Normalize chain_id ONCE
-      const rows = json.data.map(r => ({
-        ...r,
-        chain_id: Number(r.chain_id),
-      }));
+// 🩺 Health detection handling
+if (!json.success) {
+  document.getElementById("loading").innerText =
+    "⚠ Snapshot incomplete. Please try again shortly.";
+  return;
+}
+
+// 🔑 Normalize chain_id ONCE
+const rows = json.data.map(r => ({
+  ...r,
+  chain_id: Number(r.chain_id),
+}));
 
       // ---- Last updated ----
       const latestTime = Math.max(
