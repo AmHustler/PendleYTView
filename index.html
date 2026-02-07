@@ -126,6 +126,17 @@
   </table>
 
   <script>
+    let retryTimer = null;
+
+function scheduleRetry() {
+  if (retryTimer) return; // prevent duplicate timers
+
+  retryTimer = setTimeout(() => {
+    console.log("Retrying snapshot fetch...");
+    retryTimer = null;
+    loadData();
+  }, 30000);
+}
   const API =
     "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_latest_yt_overview";
 
@@ -157,7 +168,7 @@ if (!json.success) {
   document.getElementById("loading").innerText =
     "⚠ Snapshot incomplete. Retrying in 30s...";
   
-  setTimeout(loadData, 30000);
+  scheduleRetry();
   return;
 }
 
@@ -166,7 +177,7 @@ if (json.fallback) {
   document.getElementById("loading").innerText =
     "⚠ Using previous healthy snapshot. Refreshing soon...";
   
-  setTimeout(loadData, 30000);
+  scheduleRetry();
 }
 
 // 🔑 Normalize chain_id ONCE
