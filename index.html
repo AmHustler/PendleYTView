@@ -155,8 +155,18 @@ const json = await res.json();
 // 🩺 Health detection handling
 if (!json.success) {
   document.getElementById("loading").innerText =
-    "⚠ Snapshot incomplete. Please try again shortly.";
+    "⚠ Snapshot incomplete. Retrying in 30s...";
+  
+  setTimeout(loadData, 30000);
   return;
+}
+
+// If backend used fallback snapshot
+if (json.fallback) {
+  document.getElementById("loading").innerText =
+    "⚠ Using previous healthy snapshot. Refreshing soon...";
+  
+  setTimeout(loadData, 30000);
 }
 
 // 🔑 Normalize chain_id ONCE
