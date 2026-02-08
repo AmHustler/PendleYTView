@@ -165,6 +165,14 @@
     9745: "Chain 9745",
   };
 
+  function debounce(fn, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+  }
+
   async function loadData() {
     try {
       const res = await fetch(API);
@@ -186,9 +194,7 @@
       const minsAgo = Math.floor(
         (Date.now() - latestTime) / (1000 * 60)
       );
-      document.getElementById("lastUpdated").innerText =
-        `Last updated: ${minsAgo} min ago`;
-
+      
       const select = document.getElementById("chainSelect");
       const searchInput = document.getElementById("searchInput");
 
@@ -231,6 +237,9 @@
             (r.yt_name || "").toLowerCase().includes(searchTerm)
           );
         }
+        // Update header with filtered count
+document.getElementById("lastUpdated").innerText =
+  `Last updated: ${minsAgo} min ago · ${filtered.length}/${rows.length} YTs`;
 
         filtered
           .sort(
@@ -264,7 +273,7 @@
       }
 
       select.onchange = renderTable;
-      searchInput.oninput = renderTable;
+      searchInput.oninput = debounce(renderTable, 300);
 
       renderTable();
 
