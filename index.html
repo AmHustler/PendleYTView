@@ -111,6 +111,48 @@ thead th {
       text-align: center;
       color: #9ca3af;
     }
+    /* ============================= */
+/* Premium Loading Shimmer */
+/* ============================= */
+
+.shimmer-row td {
+  padding: 14px;
+}
+
+.shimmer-box {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    #1f2937 0%,
+    #2d3748 50%,
+    #1f2937 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerMove 1.4s ease-in-out infinite;
+}
+
+.shimmer-name {
+  width: 120px;
+  height: 16px;
+}
+
+.shimmer-yield {
+  width: 60px;
+}
+
+.shimmer-apy {
+  width: 80px;
+}
+
+@keyframes shimmerMove {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
   </style>
 </head>
 
@@ -145,7 +187,7 @@ thead th {
   </div>
   </div>
 
-  <div id="loading" class="loading">Loading YTs…</div>
+  <div id="loading" class="loading"></div>
 
   <table id="ytTable">
     <thead>
@@ -189,6 +231,27 @@ thead th {
   }
 
   async function loadData() {
+    // Show shimmer while loading
+const loadingDiv = document.getElementById("loading");
+const table = document.getElementById("ytTable");
+const body = document.getElementById("ytBody");
+
+loadingDiv.style.display = "block";
+table.style.display = "table";
+body.innerHTML = "";
+
+for (let i = 0; i < 8; i++) {
+  const tr = document.createElement("tr");
+  tr.className = "shimmer-row";
+
+  tr.innerHTML = `
+    <td><div class="shimmer-box shimmer-name"></div></td>
+    <td class="center"><div class="shimmer-box shimmer-yield"></div></td>
+    <td class="center"><div class="shimmer-box shimmer-apy"></div></td>
+  `;
+
+  body.appendChild(tr);
+}
     try {
       const res = await fetch(API);
       const json = await res.json();
