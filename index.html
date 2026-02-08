@@ -43,13 +43,28 @@
     }
 
     table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+#ytTable {
+  display: block;
+  max-height: 75vh;
+  overflow-y: auto;
+}
 
     thead {
-      background: #111827;
-    }
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #111827;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+thead th {
+  backdrop-filter: blur(4px);
+}
 
     th {
       text-align: left;
@@ -132,7 +147,7 @@
 
   <div id="loading" class="loading">Loading YTs…</div>
 
-  <table id="ytTable" style="display:none;">
+  <table id="ytTable">
     <thead>
       <tr>
         <th>YT</th>
