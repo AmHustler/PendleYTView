@@ -121,6 +121,27 @@ Pendle Monitoring
 const SUPABASE_URL = "https://monxcxbrwkjaiwaiosdg.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vbnhjeGJyd2tqYWl3YWlvc2RnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NzgwNzUsImV4cCI6MjA4NTE1NDA3NX0.xHJNYLKKzhuMmHuJvm_agIKQq5puEeuyQlQCgxmJMmI";
 
+  // 🔐 Simple Key Protection
+const params = new URLSearchParams(window.location.search);
+const ACCESS_KEY = "Bix's-Project-1-PendleYTView"; //
+
+if (params.get("key") !== ACCESS_KEY) {
+  document.body.innerHTML = `
+    <div style="
+      display:flex;
+      height:100vh;
+      align-items:center;
+      justify-content:center;
+      background:#0b0e14;
+      color:#ef4444;
+      font-family:system-ui;
+      font-size:18px;
+    ">
+      Unauthorized Access
+    </div>
+  `;
+  throw new Error("Unauthorized");
+}
 async function fetchSnapshots() {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/snapshots_meta?select=*&order=snapshot_time.desc&limit=48`,
