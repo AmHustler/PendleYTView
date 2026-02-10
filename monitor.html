@@ -109,6 +109,12 @@ async function fetchSnapshots() {
   });
 
   if (!res.ok) {
+  sessionStorage.removeItem("admin_secret");
+
+  const retry = confirm("Authentication failed. Retry?");
+  if (retry) {
+    location.reload();
+  } else {
     document.body.innerHTML = `
       <div style="
         display:flex;
@@ -120,7 +126,9 @@ async function fetchSnapshots() {
         font-size:18px;">
         Unauthorized Access
       </div>`;
-    throw new Error("Unauthorized");
+  }
+
+  throw new Error("Unauthorized");
   }
 
   return await res.json();
