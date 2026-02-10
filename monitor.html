@@ -118,15 +118,27 @@ async function fetchData() {
 function renderIngestion(data) {
   const block = document.getElementById("ingestionBlock");
 
-  const slaClass =
-    data.sla_percent >= 99 ? "good" :
-    data.sla_percent >= 95 ? "warn" : "bad";
+  let status = "Healthy";
+  let color = "good";
+
+  if (data.health_score < 70) {
+    status = "Critical";
+    color = "bad";
+  } else if (data.health_score < 90) {
+    status = "Degraded";
+    color = "warn";
+  }
 
   block.innerHTML = `
-    <div class="metric ${slaClass}">${data.sla_percent}% SLA</div>
+    <div class="metric ${color}">
+      ${data.health_score}/100 — ${status}
+    </div>
+
     <div class="small">
-      Latest Snapshot: ${data.latest_snapshot}<br/>
-      Rows: ${data.row_count}<br/>
+      Last Snapshot: ${data.latest_snapshot}<br/>
+      ${data.minutes_since_latest} minutes ago<br/>
+      Rows: ${data.row_count} 
+      (${data.row_change_percent > 0 ? "+" : ""}${data.row_change_percent}%)<br/>
       Chains: ${data.chain_count}<br/>
       Duration: ${data.duration_ms} ms
     </div>
@@ -134,10 +146,12 @@ function renderIngestion(data) {
     <div class="divider"></div>
 
     <div class="small">
+      SLA: ${data.sla_percent}%<br/>
+      Interval Drift: ${data.interval_drift_minutes} min<br/>
       Avg Duration: ${data.avg_duration_ms} ms<br/>
       P95 Duration: ${data.p95_duration_ms} ms<br/>
       Max Duration: ${data.max_duration_ms} ms<br/>
-      Total Runs: ${data.total_runs}
+      Runs: ${data.total_runs}
     </div>
   `;
 }
