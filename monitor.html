@@ -12,34 +12,49 @@ body {
   background: #0b0e14;
   color: #e6e6e6;
 }
+
 header {
-  padding: 16px;
-  font-size: 18px;
+  padding: 18px;
+  font-size: 20px;
   font-weight: 600;
   border-bottom: 1px solid #1f2937;
 }
-.section { padding: 16px; }
+
+.section {
+  padding: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
 .card {
   background: #111827;
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 14px;
+  border-radius: 12px;
+  padding: 16px;
 }
+
+.metric {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.small {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
 .good { color: #22c55e; }
 .warn { color: #f59e0b; }
 .bad { color: #ef4444; }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+
+.divider {
+  height: 1px;
+  background: #1f2937;
+  margin: 14px 0;
 }
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #1f2937;
-}
-thead { background: #0f172a; }
-.small { font-size: 12px; color: #9ca3af; }
-.sparkline { width: 100%; height: 50px; }
 </style>
 </head>
 
@@ -47,51 +62,35 @@ thead { background: #0f172a; }
 
 <header>
 Pendle Monitoring
-<div class="small" id="refreshInfo">Auto-refresh every 60 seconds</div>
+<div class="small">Auto refresh every 60 seconds</div>
 </header>
 
 <div class="section">
 
+<div class="grid">
+
 <div class="card">
-<strong>System Health</strong>
-<div id="healthStatus"></div>
+<strong>📊 Ingestion Health</strong>
+<div id="ingestionBlock"></div>
 </div>
 
 <div class="card">
-<strong>SLA & Performance</strong>
-<div id="slaStats"></div>
-<svg id="rowTrend" class="sparkline"></svg>
-<svg id="durationTrend" class="sparkline"></svg>
+<strong>📈 Traffic Overview</strong>
+<div id="trafficBlock"></div>
 </div>
 
 <div class="card">
-<strong>Anomaly & Alert Log</strong>
-<div id="alertLog"></div>
+<strong>🚨 Alerts</strong>
+<div id="alertBlock"></div>
 </div>
 
-<div class="card">
-<strong>Recent Snapshot History</strong>
-<table>
-<thead>
-<tr>
-<th>Time</th>
-<th>Rows</th>
-<th>Chains</th>
-<th>Duration</th>
-<th>Anomaly</th>
-<th>Delay</th>
-<th>Alert</th>
-</tr>
-</thead>
-<tbody id="historyTable"></tbody>
-</table>
 </div>
-
 </div>
 
 <script>
 
-// 🔐 Secure Admin Login (Session-based)
+const WORKER_URL = "https://pendle-worker.haripavanveera.workers.dev/monitor";
+
 let ADMIN_SECRET = sessionStorage.getItem("admin_secret");
 
 if (!ADMIN_SECRET) {
@@ -101,23 +100,10 @@ if (!ADMIN_SECRET) {
   }
 }
 
-async function fetchSnapshots() {
-  let password = sessionStorage.getItem("admin_secret");
-
-  if (!password) {
-    password = prompt("Enter Admin Password");
-    if (!password) throw new Error("No password entered");
-    sessionStorage.setItem("admin_secret", password);
-  }
-
-  const res = await fetch(
-    "https://pendle-worker.haripavanveera.workers.dev/monitor",
-    {
-      headers: {
-        "x-admin-secret": password
-      }
-    }
-  );
+async function fetchData() {
+  const res = await fetch(WORKER_URL, {
+    headers: { "x-admin-secret": ADMIN_SECRET }
+  });
 
   if (!res.ok) {
     sessionStorage.removeItem("admin_secret");
@@ -129,107 +115,84 @@ async function fetchSnapshots() {
   return await res.json();
 }
 
-function drawSparkline(svgId, values, color) {
-  const svg = document.getElementById(svgId);
-  svg.innerHTML = "";
-  if (!values.length) return;
+function renderIngestion(data) {
+  const block = document.getElementById("ingestionBlock");
 
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = max - min || 1;
+  const slaClass =
+    data.sla_percent >= 99 ? "good" :
+    data.sla_percent >= 95 ? "warn" : "bad";
 
-  const width = svg.clientWidth;
-  const height = svg.clientHeight;
-
-  const points = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * width;
-    const y = height - ((v - min) / range) * height;
-    return `${x},${y}`;
-  }).join(" ");
-
-  const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-  polyline.setAttribute("points", points);
-  polyline.setAttribute("fill", "none");
-  polyline.setAttribute("stroke", color);
-  polyline.setAttribute("stroke-width", "2");
-
-  svg.appendChild(polyline);
-}
-
-async function loadMonitoring() {
-  const data = await fetchSnapshots();
-  if (!data || !data.length) return;
-
-  const latest = data[0];
-  const now = Date.now();
-  const snapshotTime = new Date(latest.snapshot_time).getTime();
-  const minsAgo = Math.floor((now - snapshotTime) / 60000);
-
-  let healthClass = "good";
-  let healthText = "Healthy";
-
-  if (latest.anomaly_flag || latest.delay_flag) {
-    healthClass = "bad";
-    healthText = "Issue Detected";
-  } else if (minsAgo > 75) {
-    healthClass = "warn";
-    healthText = "Delayed";
-  }
-
-  document.getElementById("healthStatus").innerHTML = `
-    <div class="${healthClass}">${healthText}</div>
+  block.innerHTML = `
+    <div class="metric ${slaClass}">${data.sla_percent}% SLA</div>
     <div class="small">
-      Snapshot: ${latest.snapshot_time}<br/>
-      ${minsAgo} minutes ago
+      Latest Snapshot: ${data.latest_snapshot}<br/>
+      Rows: ${data.row_count}<br/>
+      Chains: ${data.chain_count}<br/>
+      Duration: ${data.duration_ms} ms
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="small">
+      Avg Duration: ${data.avg_duration_ms} ms<br/>
+      P95 Duration: ${data.p95_duration_ms} ms<br/>
+      Max Duration: ${data.max_duration_ms} ms<br/>
+      Total Runs: ${data.total_runs}
     </div>
   `;
-
-  const uptimeCount = data.filter(d => !d.anomaly_flag && !d.delay_flag).length;
-  const uptimePercent = ((uptimeCount / data.length) * 100).toFixed(1);
-
-  document.getElementById("slaStats").innerHTML = `
-    SLA (last ${data.length} runs): ${uptimePercent}%<br/>
-    Rows: ${latest.row_count}<br/>
-    Chains: ${latest.chain_count}<br/>
-    Duration: ${latest.duration_ms} ms
-  `;
-
-  drawSparkline("rowTrend", data.map(d => d.row_count).reverse(), "#22c55e");
-  drawSparkline("durationTrend", data.map(d => d.duration_ms).reverse(), "#60a5fa");
-
-  const alertEntries = data.filter(d => d.anomaly_flag || d.delay_flag);
-
-  document.getElementById("alertLog").innerHTML =
-    alertEntries.length === 0
-      ? "No recent alerts."
-      : alertEntries.map(a => `
-        <div class="small">
-          ${a.snapshot_time} —
-          ${a.anomaly_flag ? "Anomaly " : ""}
-          ${a.delay_flag ? "Delay" : ""}
-        </div>
-      `).join("");
-
-  const tbody = document.getElementById("historyTable");
-  tbody.innerHTML = "";
-
-  data.forEach(row => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${row.snapshot_time}</td>
-      <td>${row.row_count}</td>
-      <td>${row.chain_count}</td>
-      <td>${row.duration_ms} ms</td>
-      <td>${row.anomaly_flag ? "⚠" : "✓"}</td>
-      <td>${row.delay_flag ? "⏳" : "-"}</td>
-      <td>${row.alert_sent_at ? "📩" : "-"}</td>
-    `;
-    tbody.appendChild(tr);
-  });
 }
 
-setInterval(loadMonitoring, 60000);
-loadMonitoring();
+function renderTraffic(data) {
+  const block = document.getElementById("trafficBlock");
+
+  const growthClass =
+    data.growth_percent > 0 ? "good" :
+    data.growth_percent < 0 ? "bad" : "warn";
+
+  block.innerHTML = `
+    <div class="metric">${data.today_total} visits today</div>
+    <div class="small">
+      Unique Today: ${data.today_unique}<br/>
+      Yesterday: ${data.yesterday_total}<br/>
+      Unique Yesterday: ${data.yesterday_unique}<br/>
+      Growth: <span class="${growthClass}">${data.growth_percent}%</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="small">
+      30 Day Total: ${data.total_30_days}<br/>
+      30 Day Unique: ${data.unique_30_days}
+    </div>
+  `;
+}
+
+function renderAlerts(data) {
+  const block = document.getElementById("alertBlock");
+
+  const alertClass =
+    data.total_last_48_runs === 0 ? "good" : "bad";
+
+  block.innerHTML = `
+    <div class="metric ${alertClass}">
+      ${data.total_last_48_runs} Alerts (last 48 runs)
+    </div>
+    <div class="small">
+      Last Alert: ${data.last_alert_time ?? "None"}
+    </div>
+  `;
+}
+
+async function load() {
+  const data = await fetchData();
+
+  renderIngestion(data.ingestion);
+  renderTraffic(data.traffic);
+  renderAlerts(data.alerts);
+}
+
+setInterval(load, 60000);
+load();
 
 </script>
 
