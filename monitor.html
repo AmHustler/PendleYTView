@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -21,40 +21,45 @@ header {
 }
 
 .section {
-  padding: 16px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
+  padding: 18px;
 }
 
 .card {
   background: #111827;
   border-radius: 12px;
-  padding: 16px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.03);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
 }
 
 .metric {
-  font-size: 26px;
-  font-weight: 700;
+  background: #0f172a;
+  padding: 14px;
+  border-radius: 10px;
 }
 
-.small {
+.metric-title {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 6px;
 }
 
 .good { color: #22c55e; }
 .warn { color: #f59e0b; }
 .bad { color: #ef4444; }
 
-.divider {
-  height: 1px;
-  background: #1f2937;
-  margin: 14px 0;
-}
+.small { font-size: 12px; color: #9ca3af; }
 </style>
 </head>
 
@@ -62,151 +67,112 @@ header {
 
 <header>
 Pendle Monitoring
-<div class="small">Auto refresh every 60 seconds</div>
+<div class="small">Auto-refresh every 60 seconds</div>
 </header>
 
 <div class="section">
 
-<div class="grid">
-
 <div class="card">
-<strong>📊 Ingestion Health</strong>
-<div id="ingestionBlock"></div>
+<h3>📊 Ingestion Health</h3>
+<div id="ingestionMetrics" class="grid"></div>
 </div>
 
 <div class="card">
-<strong>📈 Traffic Overview</strong>
-<div id="trafficBlock"></div>
+<h3>📈 Traffic Overview</h3>
+<div id="trafficMetrics" class="grid"></div>
 </div>
 
 <div class="card">
-<strong>🚨 Alerts</strong>
-<div id="alertBlock"></div>
+<h3>🚨 Alerts</h3>
+<div id="alertMetrics" class="grid"></div>
 </div>
 
-</div>
 </div>
 
 <script>
 
-const WORKER_URL = "https://pendle-worker.haripavanveera.workers.dev/monitor";
+// 🔐 Password session
+let password = sessionStorage.getItem("admin_secret");
 
-let ADMIN_SECRET = sessionStorage.getItem("admin_secret");
-
-if (!ADMIN_SECRET) {
-  ADMIN_SECRET = prompt("Enter admin password:");
-  if (ADMIN_SECRET) {
-    sessionStorage.setItem("admin_secret", ADMIN_SECRET);
-  }
+if (!password) {
+  password = prompt("Enter Admin Password:");
+  if (password) sessionStorage.setItem("admin_secret", password);
 }
 
-async function fetchData() {
-  const res = await fetch(WORKER_URL, {
-    headers: { "x-admin-secret": ADMIN_SECRET }
-  });
+async function fetchMonitor() {
+  const res = await fetch(
+    "https://pendle-worker.haripavanveera.workers.dev/monitor",
+    {
+      headers: { "x-admin-secret": password }
+    }
+  );
 
   if (!res.ok) {
     sessionStorage.removeItem("admin_secret");
-    alert("Authentication failed.");
+    alert("Authentication failed");
     location.reload();
-    throw new Error("Unauthorized");
+    return null;
   }
 
   return await res.json();
 }
 
-function renderIngestion(data) {
-  const block = document.getElementById("ingestionBlock");
-
-  let status = "Healthy";
-  let color = "good";
-
-  if (data.health_score < 70) {
-    status = "Critical";
-    color = "bad";
-  } else if (data.health_score < 90) {
-    status = "Degraded";
-    color = "warn";
-  }
-
-  block.innerHTML = `
-    <div class="metric ${color}">
-      ${data.health_score}/100 — ${status}
-    </div>
-
-    <div class="small">
-      Last Snapshot: ${data.latest_snapshot}<br/>
-      ${data.minutes_since_latest} minutes ago<br/>
-      Rows: ${data.row_count} 
-      (${data.row_change_percent > 0 ? "+" : ""}${data.row_change_percent}%)<br/>
-      Chains: ${data.chain_count}<br/>
-      Duration: ${data.duration_ms} ms
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="small">
-      SLA: ${data.sla_percent}%<br/>
-      Interval Drift: ${data.interval_drift_minutes} min<br/>
-      Avg Duration: ${data.avg_duration_ms} ms<br/>
-      P95 Duration: ${data.p95_duration_ms} ms<br/>
-      Max Duration: ${data.max_duration_ms} ms<br/>
-      Runs: ${data.total_runs}
-    </div>
-  `;
-}
-
-function renderTraffic(data) {
-  const block = document.getElementById("trafficBlock");
-
-  const growthClass =
-    data.growth_percent > 0 ? "good" :
-    data.growth_percent < 0 ? "bad" : "warn";
-
-  block.innerHTML = `
-    <div class="metric">${data.today_total} visits today</div>
-    <div class="small">
-      Unique Today: ${data.today_unique}<br/>
-      Yesterday: ${data.yesterday_total}<br/>
-      Unique Yesterday: ${data.yesterday_unique}<br/>
-      Growth: <span class="${growthClass}">${data.growth_percent}%</span>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="small">
-      30 Day Total: ${data.total_30_days}<br/>
-      30 Day Unique: ${data.unique_30_days}
-    </div>
-  `;
-}
-
-function renderAlerts(data) {
-  const block = document.getElementById("alertBlock");
-
-  const alertClass =
-    data.total_last_48_runs === 0 ? "good" : "bad";
-
-  block.innerHTML = `
-    <div class="metric ${alertClass}">
-      ${data.total_last_48_runs} Alerts (last 48 runs)
-    </div>
-    <div class="small">
-      Last Alert: ${data.last_alert_time ?? "None"}
+function metric(title, value, colorClass="") {
+  return `
+    <div class="metric">
+      <div class="metric-title">${title}</div>
+      <div class="metric-value ${colorClass}">${value}</div>
     </div>
   `;
 }
 
 async function load() {
-  const data = await fetchData();
+  const data = await fetchMonitor();
+  if (!data) return;
 
-  renderIngestion(data.ingestion);
-  renderTraffic(data.traffic);
-  renderAlerts(data.alerts);
+  const ing = data.ingestion;
+  const traffic = data.traffic;
+  const alerts = data.alerts;
+
+  // =======================
+  // Ingestion Section
+  // =======================
+  document.getElementById("ingestionMetrics").innerHTML =
+    metric("Last Snapshot", ing.latest_snapshot) +
+    metric("Rows", ing.row_count) +
+    metric("Chains", ing.chain_count) +
+    metric("Duration (ms)", ing.duration_ms) +
+    metric("SLA %", ing.sla_percent,
+      ing.sla_percent >= 98 ? "good" :
+      ing.sla_percent >= 95 ? "warn" : "bad") +
+    metric("Avg Duration", ing.avg_duration_ms) +
+    metric("Max Duration", ing.max_duration_ms);
+
+  // =======================
+  // Traffic Section
+  // =======================
+  document.getElementById("trafficMetrics").innerHTML =
+    metric("Today Visits", traffic.today_total) +
+    metric("Today Unique", traffic.today_unique) +
+    metric("Yesterday Visits", traffic.yesterday_total) +
+    metric("Yesterday Unique", traffic.yesterday_unique) +
+    metric("Growth %", traffic.growth_percent,
+      traffic.growth_percent > 0 ? "good" :
+      traffic.growth_percent < 0 ? "bad" : "") +
+    metric("30d Total", traffic.total_30_days) +
+    metric("30d Unique", traffic.unique_30_days);
+
+  // =======================
+  // Alerts Section
+  // =======================
+  document.getElementById("alertMetrics").innerHTML =
+    metric("Total Alerts (30d)", alerts.total_last_30_days) +
+    metric("Last Alert Time", alerts.last_alert_time ?? "None",
+      alerts.last_alert_time ? "warn" : "good");
 }
 
-setInterval(load, 60000);
 load();
+setInterval(load, 60000);
 
 </script>
 
