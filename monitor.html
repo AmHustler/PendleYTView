@@ -102,35 +102,28 @@ if (!ADMIN_SECRET) {
 }
 
 async function fetchSnapshots() {
-  const password = prompt("Enter Admin Password");
+  let password = sessionStorage.getItem("admin_secret");
 
-const res = await fetch("/monitor", {
-  headers: {
-    "x-admin-secret": password
+  if (!password) {
+    password = prompt("Enter Admin Password");
+    if (!password) throw new Error("No password entered");
+    sessionStorage.setItem("admin_secret", password);
   }
-});
+
+  const res = await fetch(
+    "https://pendle-worker.haripavanveera.workers.dev/monitor",
+    {
+      headers: {
+        "x-admin-secret": password
+      }
+    }
+  );
 
   if (!res.ok) {
-  sessionStorage.removeItem("admin_secret");
-
-  const retry = confirm("Authentication failed. Retry?");
-  if (retry) {
+    sessionStorage.removeItem("admin_secret");
+    alert("Authentication failed.");
     location.reload();
-  } else {
-    document.body.innerHTML = `
-      <div style="
-        display:flex;
-        height:100vh;
-        align-items:center;
-        justify-content:center;
-        background:#0b0e14;
-        color:#ef4444;
-        font-size:18px;">
-        Unauthorized Access
-      </div>`;
-  }
-
-  throw new Error("Unauthorized");
+    throw new Error("Unauthorized");
   }
 
   return await res.json();
