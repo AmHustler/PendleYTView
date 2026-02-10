@@ -102,11 +102,13 @@ if (!ADMIN_SECRET) {
 }
 
 async function fetchSnapshots() {
-  const res = await fetch("/monitor", {
-    headers: {
-      "x-admin-secret": ADMIN_SECRET
-    }
-  });
+  const password = prompt("Enter Admin Password");
+
+const res = await fetch("/monitor", {
+  headers: {
+    "x-admin-secret": password
+  }
+});
 
   if (!res.ok) {
   sessionStorage.removeItem("admin_secret");
