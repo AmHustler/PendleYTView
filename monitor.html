@@ -66,8 +66,20 @@ header {
 <body>
 
 <header>
-Pendle Monitoring
-<div class="small">Auto-refresh every 60 seconds</div>
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+  <div>
+    <div style="font-size:20px;font-weight:600;">Pendle Monitoring</div>
+    <div class="small">Auto-refresh every 60 seconds</div>
+  </div>
+  <div id="statusBanner" style="
+      padding:8px 14px;
+      border-radius:8px;
+      font-size:13px;
+      font-weight:600;
+      margin-top:8px;">
+    Checking status...
+  </div>
+</div>
 </header>
 
 <div class="section">
@@ -131,6 +143,32 @@ async function loadMonitoring() {
   if (!res) return;
 
   const { ingestion, traffic, alerts } = res;
+
+  // ===============================
+// 🟢 STATUS BANNER + NEXT SNAPSHOT
+// ===============================
+
+const mins = ingestion.minutes_since_latest;
+const expectedInterval = 60;
+const minsToNext = expectedInterval - mins;
+
+let banner = document.getElementById("statusBanner");
+
+if (mins <= 60) {
+  banner.style.background = "#052e16";
+  banner.style.color = "#22c55e";
+  banner.innerHTML = `🟢 Healthy — Next snapshot in ~${minsToNext} min`;
+}
+else if (mins <= 75) {
+  banner.style.background = "#422006";
+  banner.style.color = "#f59e0b";
+  banner.innerHTML = `🟡 Delayed — Snapshot overdue by ${mins - 60} min`;
+}
+else {
+  banner.style.background = "#3f0f12";
+  banner.style.color = "#ef4444";
+  banner.innerHTML = `🔴 Critical — No snapshot for ${mins} min`;
+}
 
   // ===============================
   // INGESTION
