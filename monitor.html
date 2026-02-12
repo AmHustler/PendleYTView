@@ -1,415 +1,439 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pendle Monitoring</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pendle Sovereign Control Surface</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #0b0e14;
-  color: #e6e6e6;
+
+/* =====================================
+   SOVEREIGN THEME ENGINE
+===================================== */
+
+:root {
+  --bg: #0a0f1c;
+  --card: rgba(18,24,40,0.75);
+  --border: rgba(255,255,255,0.06);
+  --text: #e6edf3;
+  --muted: #8b98b8;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --purple: #8b5cf6;
+  --cyan: #06b6d4;
 }
+
+body {
+  margin:0;
+  background: radial-gradient(circle at 50% -10%, #131c33 0%, #0a0f1c 70%);
+  font-family: "Inter", system-ui, sans-serif;
+  color:var(--text);
+  letter-spacing:0.3px;
+}
+
+/* =====================================
+   HEADER
+===================================== */
 
 header {
-  padding: 18px;
-  font-size: 20px;
-  font-weight: 600;
-  border-bottom: 1px solid #1f2937;
+  padding:28px 40px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
-.section {
-  padding: 18px;
+.title {
+  font-size:24px;
+  font-weight:600;
 }
+
+.subtitle {
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+}
+
+#statusBanner {
+  padding:10px 20px;
+  border-radius:8px;
+  font-weight:600;
+  font-size:13px;
+  transition:0.4s ease;
+}
+
+/* =====================================
+   LAYOUT
+===================================== */
+
+.wrapper {
+  padding:36px;
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(520px,1fr));
+  gap:30px;
+}
+
+/* =====================================
+   CARD
+===================================== */
 
 .card {
-  background: #111827;
-  border-radius: 12px;
-  padding: 18px;
-  margin-bottom: 18px;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.03);
+  background:var(--card);
+  backdrop-filter: blur(14px);
+  border-radius:18px;
+  padding:24px;
+  border:1px solid var(--border);
+  position:relative;
+  overflow:hidden;
 }
 
+.card h3 {
+  font-size:13px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:22px;
+}
+
+/* =====================================
+   STABILITY INDEX
+===================================== */
+
+.index-panel {
+  text-align:center;
+  padding:24px;
+  border-radius:14px;
+  margin-bottom:22px;
+  background:rgba(139,92,246,0.08);
+  border:1px solid rgba(139,92,246,0.25);
+}
+
+.index-score {
+  font-size:40px;
+  font-weight:700;
+}
+
+.small { font-size:12px; color:var(--muted); }
+
+/* =====================================
+   GAUGE
+===================================== */
+
+.gauge svg { width:140px; height:140px; }
+
+.gauge-container {
+  display:flex;
+  align-items:center;
+  gap:30px;
+}
+
+/* =====================================
+   GRID
+===================================== */
+
 .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 14px;
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+  gap:18px;
 }
 
 .metric {
-  background: #0f172a;
-  padding: 14px;
-  border-radius: 10px;
+  background:rgba(15,22,40,0.7);
+  padding:16px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.04);
 }
 
 .metric-title {
-  font-size: 12px;
-  color: #9ca3af;
+  font-size:11px;
+  text-transform:uppercase;
+  color:var(--muted);
 }
 
 .metric-value {
-  font-size: 20px;
-  font-weight: 600;
-  margin-top: 6px;
+  font-size:18px;
+  margin-top:6px;
+  font-weight:600;
 }
 
-.good { color: #22c55e; }
-.warn { color: #f59e0b; }
-.bad { color: #ef4444; }
+/* =====================================
+   PROGRESS BAR
+===================================== */
 
-.small { font-size: 12px; color: #9ca3af; }
+.progress {
+  height:6px;
+  background:rgba(255,255,255,0.05);
+  border-radius:4px;
+  margin-top:8px;
+  overflow:hidden;
+}
+
+.progress-fill {
+  height:100%;
+  transition:0.5s ease;
+}
+
+/* =====================================
+   RADAR
+===================================== */
+
+.radar svg {
+  width:260px;
+  height:260px;
+}
+
+/* =====================================
+   SPARKLINE
+===================================== */
+
+.sparkline svg {
+  width:100%;
+  height:60px;
+}
+
 </style>
 </head>
 
 <body>
 
 <header>
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
   <div>
-    <div style="font-size:20px;font-weight:600;">Pendle Monitoring</div>
-    <div class="small">Auto-refresh every 60 seconds</div>
+    <div class="title">Pendle Sovereign Control Surface</div>
+    <div class="subtitle">Autonomous Quant Risk Intelligence Layer</div>
   </div>
-  <div id="statusBanner" style="
-      padding:8px 14px;
-      border-radius:8px;
-      font-size:13px;
-      font-weight:600;
-      margin-top:8px;">
-    Checking status...
-  </div>
-</div>
+  <div id="statusBanner">Initializing...</div>
 </header>
 
-<div class="section">
-
-<div class="card">
-<h3>📊 Ingestion Health</h3>
-<div id="ingestionMetrics" class="grid"></div>
-</div>
-
-<div class="card">
-<h3>📈 Traffic Overview</h3>
-<div id="trafficMetrics" class="grid"></div>
-</div>
-
-<div class="card">
-<h3>🚨 Alerts</h3>
-<div id="alertMetrics" class="grid"></div>
-</div>
+<div class="wrapper">
 
   <div class="card">
-<h3>🔮 Predictive Intelligence</h3>
-<div id="predictiveMetrics" class="grid"></div>
+    <h3>System Stability</h3>
+    <div id="stabilityIndex"></div>
+    <div id="healthGauge" class="gauge-container"></div>
   </div>
 
   <div class="card">
-<h3>🧠 Quant Intelligence</h3>
-<div id="quantMetrics" class="grid"></div>
+    <h3>Operational Matrix</h3>
+    <div id="opsGrid" class="grid"></div>
   </div>
 
   <div class="card">
-  <h3>🎲 Probabilistic Modeling</h3>
-  <div id="probabilityMetrics" class="grid"></div>
+    <h3>Risk Radar</h3>
+    <div id="riskRadar" class="radar"></div>
   </div>
-  
+
+  <div class="card">
+    <h3>Trend Momentum</h3>
+    <div id="trendSparkline" class="sparkline"></div>
+  </div>
+
+  <div class="card">
+    <h3>AI Executive Summary</h3>
+    <div id="aiNarrative"></div>
+  </div>
+
 </div>
 
 <script>
 
-// ===============================
-// 🔐 AUTH SESSION
-// ===============================
+/* =====================================
+   AUTH
+===================================== */
 
 let password = sessionStorage.getItem("admin_secret");
-
 if (!password) {
   password = prompt("Enter Admin Password:");
   if (password) sessionStorage.setItem("admin_secret", password);
 }
 
-async function fetchMonitor() {
+async function fetchMonitor(){
   const res = await fetch(
     "https://pendle-worker.haripavanveera.workers.dev/monitor",
     { headers: { "x-admin-secret": password } }
   );
-
-  if (!res.ok) {
+  if(!res.ok){
     sessionStorage.removeItem("admin_secret");
-    alert("Authentication failed");
     location.reload();
     return null;
   }
-
   return await res.json();
 }
 
-function metric(title, value, colorClass="") {
+/* =====================================
+   GAUGE
+===================================== */
+
+function renderGauge(score){
+  const r=55;
+  const c=2*Math.PI*r;
+  const offset=c-(score/100)*c;
+  const color=score>80?"#22c55e":score>60?"#f59e0b":"#ef4444";
+
   return `
-    <div class="metric">
-      <div class="metric-title">${title}</div>
-      <div class="metric-value ${colorClass}">${value}</div>
+  <div class="gauge">
+  <svg>
+    <circle cx="70" cy="70" r="${r}" stroke="rgba(255,255,255,0.05)" stroke-width="10" fill="none"/>
+    <circle cx="70" cy="70" r="${r}" stroke="${color}" stroke-width="10" fill="none"
+      stroke-dasharray="${c}" stroke-dashoffset="${offset}"
+      stroke-linecap="round"
+      transform="rotate(-90 70 70)"/>
+  </svg>
+  </div>
+  <div>
+    <div style="font-size:34px;font-weight:700;color:${color}">
+      ${score}/100
     </div>
-  `;
+    <div class="small">Composite Stability</div>
+  </div>`;
 }
 
-// ===============================
-// 🚀 MAIN LOAD
-// ===============================
+/* =====================================
+   RADAR POLYGON
+===================================== */
 
-async function loadMonitoring() {
+function renderRadar(values){
+  const size=260;
+  const center=130;
+  const radius=100;
+  const axes=values.length;
+  let points="";
 
-  const res = await fetchMonitor();
-  if (!res) return;
+  values.forEach((v,i)=>{
+    const angle=(Math.PI*2/axes)*i - Math.PI/2;
+    const r=(v/100)*radius;
+    const x=center + r*Math.cos(angle);
+    const y=center + r*Math.sin(angle);
+    points+=`${x},${y} `;
+  });
 
-  const { ingestion, traffic, alerts } = res;
-
-  // ===============================
-  // 📊 CORE VARIABLES
-  // ===============================
-
-  const avg = ingestion.avg_duration_ms;
-  const p95 = ingestion.p95_duration_ms;
-  const max = ingestion.max_duration_ms;
-  const latest = ingestion.duration_ms;
-
-  const rowDelta = parseFloat(ingestion.row_change_percent);
-  const drift = parseFloat(ingestion.interval_drift_minutes);
-  const mins = ingestion.minutes_since_latest;
-
-  const volatility = (p95 - avg) / avg;
-
-  // ===============================
-  // 🧠 VOLATILITY REGIME
-  // ===============================
-
-  let volatilityRegime = "Low";
-  if (volatility > 0.3) volatilityRegime = "Moderate";
-  if (volatility > 0.6) volatilityRegime = "High";
-
-  // ===============================
-  // 🔮 PREDICTIVE DELAY MODEL
-  // ===============================
-
-  let delayRisk = 0;
-
-  if (mins > 50) delayRisk += 25;
-  if (drift > 5) delayRisk += 20;
-  if (ingestion.sla_percent < 98) delayRisk += 20;
-  if (volatility > 0.4) delayRisk += 15;
-  if (Math.abs(rowDelta) > 5) delayRisk += 20;
-
-  delayRisk = Math.min(delayRisk, 100);
-
-  // ===============================
-  // 📈 PREDICT NEXT DURATION
-  // ===============================
-
-  let predictedDuration =
-    (latest * 0.4) +
-    (avg * 0.4) +
-    (p95 * 0.2);
-
-  if (volatility > 0.4) predictedDuration *= 1.15;
-
-  predictedDuration = Math.min(
-    Math.max(predictedDuration, avg * 0.8),
-    max * 1.1
-  );
-
-  predictedDuration = Math.round(predictedDuration);
-
-  // ===============================
-// 🎲 MONTE CARLO DELAY SIMULATION
-// ===============================
-
-function randomNormal(mean, stdDev) {
-  let u = 0, v = 0;
-  while(u === 0) u = Math.random();
-  while(v === 0) v = Math.random();
-  return mean + stdDev * Math.sqrt(-2.0 * Math.log(u)) *
-         Math.cos(2.0 * Math.PI * v);
+  return `
+  <svg>
+    <polygon points="${points}"
+      fill="rgba(139,92,246,0.4)"
+      stroke="#8b5cf6"
+      stroke-width="2"/>
+  </svg>`;
 }
 
-let delaySimulations = 300;
-let delayFailures = 0;
+/* =====================================
+   SPARKLINE
+===================================== */
 
-for (let i = 0; i < delaySimulations; i++) {
-  const simulatedDuration = randomNormal(avg, (p95 - avg) / 1.645);
+function renderSparkline(values){
+  const width=500;
+  const height=60;
+  const max=Math.max(...values);
+  const min=Math.min(...values);
+  const range=max-min || 1;
 
-  // assume ingestion becomes unstable if duration spikes heavily
-  if (simulatedDuration > avg * 1.6) {
-    delayFailures++;
-  }
+  const points=values.map((v,i)=>{
+    const x=(i/(values.length-1))*width;
+    const y=height - ((v-min)/range)*height;
+    return `${x},${y}`;
+  }).join(" ");
+
+  return `
+  <svg viewBox="0 0 ${width} ${height}">
+    <polyline points="${points}"
+      fill="none"
+      stroke="#06b6d4"
+      stroke-width="2"/>
+  </svg>`;
 }
 
-let monteCarloDelayProbability =
-  Math.round((delayFailures / delaySimulations) * 100);
+/* =====================================
+   MAIN
+===================================== */
 
-  // ===============================
-// 📉 EWMA TREND ENGINE
-// ===============================
+async function load(){
+  const res=await fetchMonitor();
+  if(!res) return;
 
-const alpha = 0.3; // smoothing factor
+  const { ingestion }=res;
 
-// Synthetic short memory model
-let ewma = avg;
+  const avg=ingestion.avg_duration_ms;
+  const p95=ingestion.p95_duration_ms;
+  const latest=ingestion.duration_ms;
+  const drift=parseFloat(ingestion.interval_drift_minutes);
+  const mins=ingestion.minutes_since_latest;
 
-ewma = alpha * latest + (1 - alpha) * ewma;
+  const volatility=(p95-avg)/avg;
+  const approxStd=(p95-avg)/1.645;
+  const z=approxStd>0?(latest-avg)/approxStd:0;
+  const anomaly=Math.min(Math.abs(z)*20,100);
 
-let ewmaTrend = "Flat";
+  const delayRisk=Math.min(
+    (mins>50?25:0)+(drift>5?20:0)+(volatility>0.4?20:0),100);
 
-if (ewma > avg * 1.05) ewmaTrend = "Uptrend";
-if (ewma < avg * 0.95) ewmaTrend = "Downtrend";
+  const composite=Math.round(
+    ingestion.health_score*0.5+
+    (100-delayRisk)*0.3+
+    (100-anomaly)*0.2);
 
-  // ===============================
-// 🚀 DRIFT ACCELERATION DETECTOR
-// ===============================
+  /* Banner */
+  const banner=document.getElementById("statusBanner");
+  if(mins<=60){
+    banner.style.background="#052e16";
+    banner.style.color="#22c55e";
+    banner.innerHTML="SYSTEM STABLE";
+  } else {
+    banner.style.background="#3f0f12";
+    banner.style.color="#ef4444";
+    banner.innerHTML="SYSTEM DEGRADED";
+  }
 
-let driftAcceleration = 0;
+  /* Stability */
+  document.getElementById("stabilityIndex").innerHTML=
+    `<div class="index-panel">
+      <div class="index-score">${composite}</div>
+      <div class="small">Institutional Stability Index</div>
+     </div>`;
 
-if (drift > 0) {
-  driftAcceleration = drift * volatility;
+  document.getElementById("healthGauge").innerHTML=
+    renderGauge(ingestion.health_score);
+
+  /* Ops */
+  document.getElementById("opsGrid").innerHTML=
+    metric("SLA %",ingestion.sla_percent)+
+    metric("Row Δ %",ingestion.row_change_percent)+
+    metric("Drift",ingestion.interval_drift_minutes+"m")+
+    metric("Avg",avg+" ms")+
+    metric("P95",p95+" ms");
+
+  /* Radar */
+  document.getElementById("riskRadar").innerHTML=
+    renderRadar([delayRisk, anomaly, volatility*100, ingestion.health_score]);
+
+  /* Sparkline */
+  document.getElementById("trendSparkline").innerHTML=
+    renderSparkline([
+      avg*0.9,
+      avg,
+      latest,
+      p95,
+      avg*1.1
+    ]);
+
+  /* AI Narrative */
+  document.getElementById("aiNarrative").innerHTML=
+    `<div class="small">
+      Stability index ${composite}. 
+      Delay risk ${delayRisk}%. 
+      Anomaly intensity ${Math.round(anomaly)}%. 
+      Volatility regime ${volatility>0.6?"High":volatility>0.3?"Moderate":"Low"}.
+    </div>`;
 }
 
-let accelerationLevel = "Normal";
-
-if (driftAcceleration > 5) accelerationLevel = "Elevating";
-if (driftAcceleration > 10) accelerationLevel = "Accelerating";
-
-  // ===============================
-  // 🧮 Z-SCORE ANOMALY ENGINE
-  // ===============================
-
-  const approxStdDev = (p95 - avg) / 1.645;
-
-  let zScore = 0;
-  if (approxStdDev > 0) {
-    zScore = (latest - avg) / approxStdDev;
-  }
-
-  let anomalyIntensity = Math.min(Math.abs(zScore) * 20, 100);
-
-  let anomalyLevel = "Stable";
-  if (anomalyIntensity > 40) anomalyLevel = "Elevated";
-  if (anomalyIntensity > 70) anomalyLevel = "Critical";
-
-  // ===============================
-  // 📉 HEALTH MOMENTUM MODEL
-  // ===============================
-
-  let momentum = 0;
-
-  if (latest > avg) momentum -= 10;
-  if (rowDelta < 0) momentum -= 10;
-  if (drift > 0) momentum -= 15;
-  if (volatility > 0.5) momentum -= 20;
-
-  momentum = 100 + momentum;
-
-  let momentumLabel = "Improving";
-  if (momentum < 90) momentumLabel = "Degrading";
-  if (momentum < 70) momentumLabel = "Unstable";
-
-  // ===============================
-  // 💣 SLA COLLAPSE PROBABILITY
-  // ===============================
-
-  let collapseProbability =
-    (delayRisk * 0.5) +
-    (anomalyIntensity * 0.3) +
-    ((100 - ingestion.sla_percent) * 0.2);
-
-  collapseProbability = Math.min(Math.round(collapseProbability), 100);
-
-  // ===============================
-  // 🟢 STATUS BANNER
-  // ===============================
-
-  const expectedInterval = 60;
-  const minsToNext = expectedInterval - mins;
-
-  let banner = document.getElementById("statusBanner");
-
-  if (mins <= 60) {
-    banner.style.background = "#052e16";
-    banner.style.color = "#22c55e";
-    banner.innerHTML = `🟢 Healthy — Next snapshot in ~${minsToNext} min`;
-  }
-  else if (mins <= 75) {
-    banner.style.background = "#422006";
-    banner.style.color = "#f59e0b";
-    banner.innerHTML = `🟡 Delayed — Overdue by ${mins - 60} min`;
-  }
-  else {
-    banner.style.background = "#3f0f12";
-    banner.style.color = "#ef4444";
-    banner.innerHTML = `🔴 Critical — No snapshot for ${mins} min`;
-  }
-
-  // ===============================
-  // 📊 INGESTION GRID
-  // ===============================
-
-  document.getElementById("ingestionMetrics").innerHTML =
-    metric("Health Score", ingestion.health_score + "/100") +
-    metric("Minutes Since Snapshot", mins) +
-    metric("Row Δ %", rowDelta + "%") +
-    metric("Interval Drift", drift + "m") +
-    metric("Volatility Regime", volatilityRegime) +
-    metric("SLA %", ingestion.sla_percent + "%") +
-    metric("Avg Duration", avg + " ms") +
-    metric("P95 Duration", p95 + " ms") +
-    metric("Max Duration", max + " ms");
-
-  // ===============================
-  // 📈 TRAFFIC GRID
-  // ===============================
-
-  document.getElementById("trafficMetrics").innerHTML =
-    metric("Today Visits", traffic.today_total) +
-    metric("Today Unique", traffic.today_unique) +
-    metric("Yesterday Visits", traffic.yesterday_total) +
-    metric("Growth %", traffic.growth_percent + "%") +
-    metric("30d Total", traffic.total_30_days) +
-    metric("30d Unique", traffic.unique_30_days);
-
-  // ===============================
-  // 🚨 ALERTS
-  // ===============================
-
-  document.getElementById("alertMetrics").innerHTML =
-    metric("Alerts (48 Runs)", alerts.total_last_48_runs) +
-    metric("Last Alert", alerts.last_alert_time || "None");
-
-  // ===============================
-  // 🔮 PREDICTIVE
-  // ===============================
-
-  document.getElementById("predictiveMetrics").innerHTML =
-    metric("Delay Risk", delayRisk + "%") +
-    metric("Predicted Duration", predictedDuration + " ms") +
-    metric("Collapse Probability", collapseProbability + "%") +
-    metric("Momentum", momentumLabel);
-
-  // ===============================
-  // 🧠 QUANT
-  // ===============================
-
-  document.getElementById("quantMetrics").innerHTML =
-    metric("Z-Score", zScore.toFixed(2)) +
-    metric("Anomaly Intensity", anomalyIntensity + "%") +
-    metric("Anomaly Level", anomalyLevel);
-
-  document.getElementById("probabilityMetrics").innerHTML =
-  metric("Monte Carlo Delay Risk", monteCarloDelayProbability + "%") +
-  metric("EWMA Trend", ewmaTrend) +
-  metric("Drift Acceleration", accelerationLevel);
+function metric(title,value){
+  return `<div class="metric">
+            <div class="metric-title">${title}</div>
+            <div class="metric-value">${value}</div>
+          </div>`;
 }
 
-loadMonitoring();
-setInterval(loadMonitoring, 60000);
+load();
+setInterval(load,60000);
 
 </script>
 
