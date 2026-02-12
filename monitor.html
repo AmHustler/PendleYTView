@@ -127,85 +127,55 @@ function metric(title, value, colorClass="") {
 }
 
 async function loadMonitoring() {
-  const res = await fetchSnapshots();
+  const res = await fetchMonitor();
   if (!res) return;
 
   const { ingestion, traffic, alerts } = res;
 
   // ===============================
-  // 🧠 HEALTH GRADE
+  // INGESTION
   // ===============================
 
-  const score = ingestion.health_score;
-  let grade = "A";
-  let color = "#22c55e";
+  let healthColor = "good";
+  if (ingestion.health_score < 90) healthColor = "warn";
+  if (ingestion.health_score < 70) healthColor = "bad";
 
-  if (score < 90) { grade = "B"; color = "#f59e0b"; }
-  if (score < 75) { grade = "C"; color = "#fb923c"; }
-  if (score < 60) { grade = "D"; color = "#ef4444"; }
-
-  document.getElementById("healthStatus").innerHTML = `
-    <div style="font-size:28px;font-weight:700;color:${color}">
-      ${score} / 100
-    </div>
-    <div class="small">Grade: ${grade}</div>
-    <div class="small">
-      ${ingestion.minutes_since_latest} mins since last snapshot
-    </div>
-  `;
+  document.getElementById("ingestionMetrics").innerHTML =
+    metric("Health Score", ingestion.health_score + "/100", healthColor) +
+    metric("Rows", ingestion.row_count) +
+    metric("Chains", ingestion.chain_count) +
+    metric("Minutes Since Snapshot", ingestion.minutes_since_latest) +
+    metric("Row Δ %", ingestion.row_change_percent + "%") +
+    metric("Interval Drift", ingestion.interval_drift_minutes + "m") +
+    metric("SLA", ingestion.sla_percent + "%") +
+    metric("Avg Duration", ingestion.avg_duration_ms + " ms") +
+    metric("P95 Duration", ingestion.p95_duration_ms + " ms") +
+    metric("Max Duration", ingestion.max_duration_ms + " ms");
 
   // ===============================
-  // 📊 INGESTION METRICS GRID
+  // TRAFFIC
   // ===============================
 
-  document.getElementById("slaStats").innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-
-      <div>Rows<br/><strong>${ingestion.row_count}</strong></div>
-      <div>Chains<br/><strong>${ingestion.chain_count}</strong></div>
-
-      <div>Row Δ %<br/><strong>${ingestion.row_change_percent}%</strong></div>
-      <div>Interval Drift<br/><strong>${ingestion.interval_drift_minutes}m</strong></div>
-
-      <div>SLA<br/><strong>${ingestion.sla_percent}%</strong></div>
-      <div>Total Runs<br/><strong>${ingestion.total_runs}</strong></div>
-
-      <div>Avg Duration<br/><strong>${ingestion.avg_duration_ms} ms</strong></div>
-      <div>P95 Duration<br/><strong>${ingestion.p95_duration_ms} ms</strong></div>
-
-      <div>Max Duration<br/><strong>${ingestion.max_duration_ms} ms</strong></div>
-
-    </div>
-  `;
+  document.getElementById("trafficMetrics").innerHTML =
+    metric("Today Visits", traffic.today_total) +
+    metric("Today Unique", traffic.today_unique) +
+    metric("Yesterday Visits", traffic.yesterday_total) +
+    metric("Yesterday Unique", traffic.yesterday_unique) +
+    metric("Growth %", traffic.growth_percent + "%") +
+    metric("30d Total", traffic.total_30_days) +
+    metric("30d Unique", traffic.unique_30_days);
 
   // ===============================
-  // 📈 TRAFFIC METRICS GRID
+  // ALERTS
   // ===============================
 
-  document.getElementById("alertLog").innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-
-      <div>Today Visits<br/><strong>${traffic.today_total}</strong></div>
-      <div>Today Unique<br/><strong>${traffic.today_unique}</strong></div>
-
-      <div>Yesterday Visits<br/><strong>${traffic.yesterday_total}</strong></div>
-      <div>Yesterday Unique<br/><strong>${traffic.yesterday_unique}</strong></div>
-
-      <div>Growth %<br/><strong>${traffic.growth_percent}%</strong></div>
-      <div>30d Total<br/><strong>${traffic.total_30_days}</strong></div>
-
-      <div>30d Unique<br/><strong>${traffic.unique_30_days}</strong></div>
-
-    </div>
-    <hr style="margin:14px 0;border-color:#1f2937"/>
-    <div>
-      Alerts (48 runs): <strong>${alerts.total_last_48_runs}</strong><br/>
-      Last Alert: <strong>${alerts.last_alert_time || "None"}</strong>
-    </div>
-  `;
+  document.getElementById("alertMetrics").innerHTML =
+    metric("Alerts (Last 48 Runs)", alerts.total_last_48_runs) +
+    metric("Last Alert", alerts.last_alert_time || "None");
 }
-load();
-setInterval(load, 60000);
+
+loadMonitoring();
+setInterval(loadMonitoring, 60000);
 
 </script>
 
