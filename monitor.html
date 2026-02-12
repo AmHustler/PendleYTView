@@ -233,6 +233,11 @@ header {
     <div id="aiNarrative"></div>
   </div>
 
+   <div class="card">
+  <h3>🧠 Autonomous Intelligence Layer</h3>
+  <div id="autonomyPanel"></div>
+   </div>
+
 </div>
 
 <script>
@@ -371,6 +376,97 @@ async function load(){
     (100-delayRisk)*0.3+
     (100-anomaly)*0.2);
 
+   // ===============================
+// 🧠 REGIME MEMORY ENGINE
+// ===============================
+
+function pushMemory(key, value, limit=10) {
+  let arr = JSON.parse(localStorage.getItem(key) || "[]");
+  arr.push(value);
+  if (arr.length > limit) arr.shift();
+  localStorage.setItem(key, JSON.stringify(arr));
+}
+
+pushMemory("stability_history", composite);
+pushMemory("delay_history", delayRisk);
+pushMemory("anomaly_history", anomaly);
+
+const stabilityHist = JSON.parse(localStorage.getItem("stability_history"));
+const delayHist = JSON.parse(localStorage.getItem("delay_history"));
+const anomalyHist = JSON.parse(localStorage.getItem("anomaly_history"));
+
+   function acceleration(arr){
+  if(arr.length < 3) return 0;
+  const a = arr[arr.length-1] - arr[arr.length-2];
+  const b = arr[arr.length-2] - arr[arr.length-3];
+  return a - b;
+}
+
+const stabilityAccel = acceleration(stabilityHist);
+const delayAccel = acceleration(delayHist);
+const anomalyAccel = acceleration(anomalyHist);
+
+   let wHealth = 0.5;
+let wDelay = 0.3;
+let wAnomaly = 0.2;
+
+if (delayAccel > 5) {
+  wDelay += 0.1;
+  wHealth -= 0.05;
+}
+
+if (anomalyAccel > 5) {
+  wAnomaly += 0.1;
+  wHealth -= 0.05;
+}
+
+if (volatility > 0.6) {
+  wAnomaly += 0.1;
+}
+
+const adaptiveComposite = Math.round(
+  ingestion.health_score * wHealth +
+  (100 - delayRisk) * wDelay +
+  (100 - anomaly) * wAnomaly
+);
+
+   let projectedT1 = adaptiveComposite - delayAccel*2 - anomalyAccel*1.5;
+let projectedT2 = projectedT1 - delayAccel*1.5;
+let projectedT3 = projectedT2 - delayAccel;
+
+projectedT1 = Math.max(0, Math.min(100, projectedT1));
+projectedT2 = Math.max(0, Math.min(100, projectedT2));
+projectedT3 = Math.max(0, Math.min(100, projectedT3));
+
+let regime = "Stable Continuation";
+
+if (projectedT1 < adaptiveComposite - 5)
+  regime = "Stress Build-Up";
+
+if (projectedT2 < 70)
+  regime = "Imminent Degradation";
+
+if (projectedT3 < 55)
+  regime = "Collapse Probability Spike";
+
+   let decision = "MONITOR";
+let decisionColor = "#22c55e";
+
+if (regime === "Stress Build-Up") {
+  decision = "ELEVATED WATCH";
+  decisionColor = "#f59e0b";
+}
+
+if (regime === "Imminent Degradation") {
+  decision = "PREPARE INTERVENTION";
+  decisionColor = "#fb923c";
+}
+
+if (regime === "Collapse Probability Spike") {
+  decision = "INCIDENT LIKELY";
+  decisionColor = "#ef4444";
+}
+
   /* Banner */
   const banner=document.getElementById("statusBanner");
   if(mins<=60){
@@ -430,6 +526,27 @@ function metric(title,value){
             <div class="metric-title">${title}</div>
             <div class="metric-value">${value}</div>
           </div>`;
+
+   document.getElementById("autonomyPanel").innerHTML = `
+  <div class="metric">
+    <div class="metric-title">Adaptive Stability</div>
+    <div class="metric-value">${adaptiveComposite}</div>
+  </div>
+  <div class="metric">
+    <div class="metric-title">Regime Forecast</div>
+    <div class="metric-value">${regime}</div>
+  </div>
+  <div class="metric">
+    <div class="metric-title">Executive Action</div>
+    <div class="metric-value" style="color:${decisionColor}">
+      ${decision}
+    </div>
+  </div>
+  <div class="metric">
+    <div class="metric-title">Projection (T+3)</div>
+    <div class="metric-value">${projectedT3}</div>
+  </div>
+`;
 }
 
 load();
