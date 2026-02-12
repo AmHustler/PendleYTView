@@ -103,6 +103,11 @@ header {
 <h3>🔮 Predictive Intelligence</h3>
 <div id="predictiveMetrics" class="grid"></div>
   </div>
+
+  <div class="card">
+<h3>🧠 Quant Intelligence</h3>
+<div id="quantMetrics" class="grid"></div>
+  </div>
   
 </div>
 
@@ -188,6 +193,57 @@ let predictiveConfidence = 100 - (
 if (predictiveConfidence < 0) predictiveConfidence = 0;
 
   // ===============================
+// 📈 DURATION PREDICTION ENGINE
+// ===============================
+
+const avg = ingestion.avg_duration_ms;
+const p95 = ingestion.p95_duration_ms;
+const max = ingestion.max_duration_ms;
+const latestDuration = ingestion.duration_ms;
+
+// Volatility factor
+const volatility = (p95 - avg) / avg;
+
+// Weighted bias toward latest
+let predictedDuration =
+  (latestDuration * 0.4) +
+  (avg * 0.4) +
+  (p95 * 0.2);
+
+// Stress penalty if volatility high
+if (volatility > 0.4) {
+  predictedDuration *= 1.15;
+}
+
+// Cap to reasonable bounds
+if (predictedDuration < avg * 0.8)
+  predictedDuration = avg * 0.8;
+
+if (predictedDuration > max * 1.1)
+  predictedDuration = max * 1.1;
+
+predictedDuration = Math.round(predictedDuration);
+
+  // ===============================
+// 🧮 QUANT ANOMALY ENGINE
+// ===============================
+
+// Approximate standard deviation
+const approxStdDev = (p95 - avg) / 1.645; // normal distribution approx
+
+let zScore = 0;
+if (approxStdDev > 0) {
+  zScore = (latestDuration - avg) / approxStdDev;
+}
+
+let anomalyIntensity = Math.abs(zScore) * 20; // scaled model
+if (anomalyIntensity > 100) anomalyIntensity = 100;
+
+let anomalyLevel = "Stable";
+if (anomalyIntensity > 40) anomalyLevel = "Elevated";
+if (anomalyIntensity > 70) anomalyLevel = "Critical";
+
+  // ===============================
 // 🟢 STATUS BANNER + NEXT SNAPSHOT
 // ===============================
 
@@ -259,6 +315,13 @@ else {
   ${metric("Duration Spike Risk", durationRisk + "%", durationRisk > 60 ? "bad" : durationRisk > 40 ? "warn" : "good")}
   ${metric("Row Instability Risk", anomalyRisk + "%", anomalyRisk > 60 ? "bad" : anomalyRisk > 40 ? "warn" : "good")}
   ${metric("Predictive Confidence", Math.round(predictiveConfidence) + "%", predictiveConfidence > 70 ? "good" : predictiveConfidence > 50 ? "warn" : "bad")}
+`;
+
+  document.getElementById("quantMetrics").innerHTML = `
+  ${metric("Predicted Next Duration", predictedDuration + " ms")}
+  ${metric("Z-Score", zScore.toFixed(2))}
+  ${metric("Anomaly Intensity", Math.round(anomalyIntensity) + "%", anomalyIntensity > 70 ? "bad" : anomalyIntensity > 40 ? "warn" : "good")}
+  ${metric("Anomaly Level", anomalyLevel, anomalyIntensity > 70 ? "bad" : anomalyIntensity > 40 ? "warn" : "good")}
 `;
 }
 
