@@ -124,7 +124,7 @@ header{
 
 .radar svg{
   width:100%;
-  max-width:360px;
+  max-width:420px;
   height:auto;
 }
 
@@ -261,9 +261,10 @@ function renderGauge(core,adaptive){
 
 function renderRadar(values){
 
-  const size = 360;
-  const center = size / 2;
-  const radius = 110;
+  const size = 420;        // bigger canvas
+const padding = 40;      // safe label space
+const center = size / 2;
+const radius = 130;      // slightly bigger radar
   const axes = values.length;
 
   const labels = ["Delay","Anomaly","Volatility","Health"];
@@ -306,9 +307,8 @@ function renderRadar(values){
             stroke-width="1"/>`;
 
     // Axis label
-    const lx = center + (radius + 30)*Math.cos(angle);
-    const ly = center + (radius + 30)*Math.sin(angle);
-
+    const lx = center + (radius + 18)*Math.cos(angle);
+const ly = center + (radius + 18)*Math.sin(angle);
     let anchor = "middle";
     if(Math.cos(angle) > 0.3) anchor = "start";
     if(Math.cos(angle) < -0.3) anchor = "end";
