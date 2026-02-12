@@ -257,11 +257,9 @@ function renderGauge(core,adaptive){
 
 function renderRadar(values){
 
-  const padding = 60;                 // SAFE BUFFER
-  const baseSize = 320;
-  const size = baseSize + padding;
-  const center = size / 2;
-  const radius = 100;
+  const size = 360;            // Bigger canvas
+  const center = size / 2;     // True center
+  const radius = 110;          // Slightly smaller than half
   const axes = values.length;
 
   const labels = ["Delay","Anomaly","Volatility","Health"];
@@ -301,9 +299,9 @@ function renderRadar(values){
             stroke="rgba(255,255,255,0.06)"
             stroke-width="1"/>`;
 
-    // Label INSIDE safe zone
-    const lx = center + (radius + 22)*Math.cos(angle);
-    const ly = center + (radius + 22)*Math.sin(angle);
+    // Push labels OUTSIDE radius safely
+    const lx = center + (radius + 30)*Math.cos(angle);
+    const ly = center + (radius + 30)*Math.sin(angle);
 
     let anchor = "middle";
     if(Math.cos(angle) > 0.3) anchor = "start";
@@ -465,7 +463,15 @@ async function load(){
   /* Trend */
   document.getElementById("trendSparkline").innerHTML=
     renderSparkline(stabilityHist);
+let trendLabel = "Flat";
+if (stabilityAccel > 2) trendLabel = "Uptrend";
+if (stabilityAccel < -2) trendLabel = "Downtrend";
 
+document.getElementById("trendSparkline").innerHTML +=
+  `<div class="small" style="margin-top:10px">
+    Trend: ${trendLabel}
+  </div>`;
+  
   /* AI Narrative */
   document.getElementById("aiNarrative").innerHTML=
     `<div class="small">
