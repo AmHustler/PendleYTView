@@ -113,7 +113,10 @@ header {
 
 <script>
 
-// 🔐 Password session
+// ===============================
+// 🔐 AUTH SESSION
+// ===============================
+
 let password = sessionStorage.getItem("admin_secret");
 
 if (!password) {
@@ -124,9 +127,7 @@ if (!password) {
 async function fetchMonitor() {
   const res = await fetch(
     "https://pendle-worker.haripavanveera.workers.dev/monitor",
-    {
-      headers: { "x-admin-secret": password }
-    }
+    { headers: { "x-admin-secret": password } }
   );
 
   if (!res.ok) {
@@ -148,181 +149,195 @@ function metric(title, value, colorClass="") {
   `;
 }
 
+// ===============================
+// 🚀 MAIN LOAD
+// ===============================
+
 async function loadMonitoring() {
+
   const res = await fetchMonitor();
   if (!res) return;
 
   const { ingestion, traffic, alerts } = res;
 
   // ===============================
-// 🔮 PREDICTIVE INTELLIGENCE ENGINE
-// ===============================
-
-const durationsSpread = ingestion.p95_duration_ms - ingestion.avg_duration_ms;
-const durationVolatilityScore = durationsSpread / ingestion.avg_duration_ms;
-
-let delayRisk = 0;
-let durationRisk = 0;
-let anomalyRisk = 0;
-
-// Delay Risk
-if (ingestion.minutes_since_latest > 50) delayRisk += 30;
-if (ingestion.interval_drift_minutes > 5) delayRisk += 25;
-if (ingestion.sla_percent < 98) delayRisk += 20;
-
-// Duration Risk
-if (durationVolatilityScore > 0.5) durationRisk += 30;
-if (ingestion.max_duration_ms > ingestion.avg_duration_ms * 1.5) durationRisk += 30;
-if (ingestion.p95_duration_ms > ingestion.avg_duration_ms * 1.3) durationRisk += 20;
-
-// Row Risk
-if (Math.abs(parseFloat(ingestion.row_change_percent)) > 5) anomalyRisk += 30;
-
-// Normalize (0–100 cap)
-delayRisk = Math.min(delayRisk, 100);
-durationRisk = Math.min(durationRisk, 100);
-anomalyRisk = Math.min(anomalyRisk, 100);
-
-// Confidence Model
-let predictiveConfidence = 100 - (
-  (delayRisk * 0.4) +
-  (durationRisk * 0.3) +
-  (anomalyRisk * 0.3)
-);
-
-if (predictiveConfidence < 0) predictiveConfidence = 0;
-
-  // ===============================
-// 📈 DURATION PREDICTION ENGINE
-// ===============================
-
-const avg = ingestion.avg_duration_ms;
-const p95 = ingestion.p95_duration_ms;
-const max = ingestion.max_duration_ms;
-const latestDuration = ingestion.duration_ms;
-
-// Volatility factor
-const volatility = (p95 - avg) / avg;
-
-// Weighted bias toward latest
-let predictedDuration =
-  (latestDuration * 0.4) +
-  (avg * 0.4) +
-  (p95 * 0.2);
-
-// Stress penalty if volatility high
-if (volatility > 0.4) {
-  predictedDuration *= 1.15;
-}
-
-// Cap to reasonable bounds
-if (predictedDuration < avg * 0.8)
-  predictedDuration = avg * 0.8;
-
-if (predictedDuration > max * 1.1)
-  predictedDuration = max * 1.1;
-
-predictedDuration = Math.round(predictedDuration);
-
-  // ===============================
-// 🧮 QUANT ANOMALY ENGINE
-// ===============================
-
-// Approximate standard deviation
-const approxStdDev = (p95 - avg) / 1.645; // normal distribution approx
-
-let zScore = 0;
-if (approxStdDev > 0) {
-  zScore = (latestDuration - avg) / approxStdDev;
-}
-
-let anomalyIntensity = Math.abs(zScore) * 20; // scaled model
-if (anomalyIntensity > 100) anomalyIntensity = 100;
-
-let anomalyLevel = "Stable";
-if (anomalyIntensity > 40) anomalyLevel = "Elevated";
-if (anomalyIntensity > 70) anomalyLevel = "Critical";
-
-  // ===============================
-// 🟢 STATUS BANNER + NEXT SNAPSHOT
-// ===============================
-
-const mins = ingestion.minutes_since_latest;
-const expectedInterval = 60;
-const minsToNext = expectedInterval - mins;
-
-let banner = document.getElementById("statusBanner");
-
-if (mins <= 60) {
-  banner.style.background = "#052e16";
-  banner.style.color = "#22c55e";
-  banner.innerHTML = `🟢 Healthy — Next snapshot in ~${minsToNext} min`;
-}
-else if (mins <= 75) {
-  banner.style.background = "#422006";
-  banner.style.color = "#f59e0b";
-  banner.innerHTML = `🟡 Delayed — Snapshot overdue by ${mins - 60} min`;
-}
-else {
-  banner.style.background = "#3f0f12";
-  banner.style.color = "#ef4444";
-  banner.innerHTML = `🔴 Critical — No snapshot for ${mins} min`;
-}
-
-  // ===============================
-  // INGESTION
+  // 📊 CORE VARIABLES
   // ===============================
 
-  let healthColor = "good";
-  if (ingestion.health_score < 90) healthColor = "warn";
-  if (ingestion.health_score < 70) healthColor = "bad";
+  const avg = ingestion.avg_duration_ms;
+  const p95 = ingestion.p95_duration_ms;
+  const max = ingestion.max_duration_ms;
+  const latest = ingestion.duration_ms;
+
+  const rowDelta = parseFloat(ingestion.row_change_percent);
+  const drift = parseFloat(ingestion.interval_drift_minutes);
+  const mins = ingestion.minutes_since_latest;
+
+  const volatility = (p95 - avg) / avg;
+
+  // ===============================
+  // 🧠 VOLATILITY REGIME
+  // ===============================
+
+  let volatilityRegime = "Low";
+  if (volatility > 0.3) volatilityRegime = "Moderate";
+  if (volatility > 0.6) volatilityRegime = "High";
+
+  // ===============================
+  // 🔮 PREDICTIVE DELAY MODEL
+  // ===============================
+
+  let delayRisk = 0;
+
+  if (mins > 50) delayRisk += 25;
+  if (drift > 5) delayRisk += 20;
+  if (ingestion.sla_percent < 98) delayRisk += 20;
+  if (volatility > 0.4) delayRisk += 15;
+  if (Math.abs(rowDelta) > 5) delayRisk += 20;
+
+  delayRisk = Math.min(delayRisk, 100);
+
+  // ===============================
+  // 📈 PREDICT NEXT DURATION
+  // ===============================
+
+  let predictedDuration =
+    (latest * 0.4) +
+    (avg * 0.4) +
+    (p95 * 0.2);
+
+  if (volatility > 0.4) predictedDuration *= 1.15;
+
+  predictedDuration = Math.min(
+    Math.max(predictedDuration, avg * 0.8),
+    max * 1.1
+  );
+
+  predictedDuration = Math.round(predictedDuration);
+
+  // ===============================
+  // 🧮 Z-SCORE ANOMALY ENGINE
+  // ===============================
+
+  const approxStdDev = (p95 - avg) / 1.645;
+
+  let zScore = 0;
+  if (approxStdDev > 0) {
+    zScore = (latest - avg) / approxStdDev;
+  }
+
+  let anomalyIntensity = Math.min(Math.abs(zScore) * 20, 100);
+
+  let anomalyLevel = "Stable";
+  if (anomalyIntensity > 40) anomalyLevel = "Elevated";
+  if (anomalyIntensity > 70) anomalyLevel = "Critical";
+
+  // ===============================
+  // 📉 HEALTH MOMENTUM MODEL
+  // ===============================
+
+  let momentum = 0;
+
+  if (latest > avg) momentum -= 10;
+  if (rowDelta < 0) momentum -= 10;
+  if (drift > 0) momentum -= 15;
+  if (volatility > 0.5) momentum -= 20;
+
+  momentum = 100 + momentum;
+
+  let momentumLabel = "Improving";
+  if (momentum < 90) momentumLabel = "Degrading";
+  if (momentum < 70) momentumLabel = "Unstable";
+
+  // ===============================
+  // 💣 SLA COLLAPSE PROBABILITY
+  // ===============================
+
+  let collapseProbability =
+    (delayRisk * 0.5) +
+    (anomalyIntensity * 0.3) +
+    ((100 - ingestion.sla_percent) * 0.2);
+
+  collapseProbability = Math.min(Math.round(collapseProbability), 100);
+
+  // ===============================
+  // 🟢 STATUS BANNER
+  // ===============================
+
+  const expectedInterval = 60;
+  const minsToNext = expectedInterval - mins;
+
+  let banner = document.getElementById("statusBanner");
+
+  if (mins <= 60) {
+    banner.style.background = "#052e16";
+    banner.style.color = "#22c55e";
+    banner.innerHTML = `🟢 Healthy — Next snapshot in ~${minsToNext} min`;
+  }
+  else if (mins <= 75) {
+    banner.style.background = "#422006";
+    banner.style.color = "#f59e0b";
+    banner.innerHTML = `🟡 Delayed — Overdue by ${mins - 60} min`;
+  }
+  else {
+    banner.style.background = "#3f0f12";
+    banner.style.color = "#ef4444";
+    banner.innerHTML = `🔴 Critical — No snapshot for ${mins} min`;
+  }
+
+  // ===============================
+  // 📊 INGESTION GRID
+  // ===============================
 
   document.getElementById("ingestionMetrics").innerHTML =
-    metric("Health Score", ingestion.health_score + "/100", healthColor) +
-    metric("Rows", ingestion.row_count) +
-    metric("Chains", ingestion.chain_count) +
-    metric("Minutes Since Snapshot", ingestion.minutes_since_latest) +
-    metric("Row Δ %", ingestion.row_change_percent + "%") +
-    metric("Interval Drift", ingestion.interval_drift_minutes + "m") +
-    metric("SLA", ingestion.sla_percent + "%") +
-    metric("Avg Duration", ingestion.avg_duration_ms + " ms") +
-    metric("P95 Duration", ingestion.p95_duration_ms + " ms") +
-    metric("Max Duration", ingestion.max_duration_ms + " ms");
+    metric("Health Score", ingestion.health_score + "/100") +
+    metric("Minutes Since Snapshot", mins) +
+    metric("Row Δ %", rowDelta + "%") +
+    metric("Interval Drift", drift + "m") +
+    metric("Volatility Regime", volatilityRegime) +
+    metric("SLA %", ingestion.sla_percent + "%") +
+    metric("Avg Duration", avg + " ms") +
+    metric("P95 Duration", p95 + " ms") +
+    metric("Max Duration", max + " ms");
 
   // ===============================
-  // TRAFFIC
+  // 📈 TRAFFIC GRID
   // ===============================
 
   document.getElementById("trafficMetrics").innerHTML =
     metric("Today Visits", traffic.today_total) +
     metric("Today Unique", traffic.today_unique) +
     metric("Yesterday Visits", traffic.yesterday_total) +
-    metric("Yesterday Unique", traffic.yesterday_unique) +
     metric("Growth %", traffic.growth_percent + "%") +
     metric("30d Total", traffic.total_30_days) +
     metric("30d Unique", traffic.unique_30_days);
 
   // ===============================
-  // ALERTS
+  // 🚨 ALERTS
   // ===============================
 
   document.getElementById("alertMetrics").innerHTML =
-    metric("Alerts (Last 48 Runs)", alerts.total_last_48_runs) +
+    metric("Alerts (48 Runs)", alerts.total_last_48_runs) +
     metric("Last Alert", alerts.last_alert_time || "None");
 
-  document.getElementById("predictiveMetrics").innerHTML = `
-  ${metric("Delay Risk", delayRisk + "%", delayRisk > 60 ? "bad" : delayRisk > 40 ? "warn" : "good")}
-  ${metric("Duration Spike Risk", durationRisk + "%", durationRisk > 60 ? "bad" : durationRisk > 40 ? "warn" : "good")}
-  ${metric("Row Instability Risk", anomalyRisk + "%", anomalyRisk > 60 ? "bad" : anomalyRisk > 40 ? "warn" : "good")}
-  ${metric("Predictive Confidence", Math.round(predictiveConfidence) + "%", predictiveConfidence > 70 ? "good" : predictiveConfidence > 50 ? "warn" : "bad")}
-`;
+  // ===============================
+  // 🔮 PREDICTIVE
+  // ===============================
 
-  document.getElementById("quantMetrics").innerHTML = `
-  ${metric("Predicted Next Duration", predictedDuration + " ms")}
-  ${metric("Z-Score", zScore.toFixed(2))}
-  ${metric("Anomaly Intensity", Math.round(anomalyIntensity) + "%", anomalyIntensity > 70 ? "bad" : anomalyIntensity > 40 ? "warn" : "good")}
-  ${metric("Anomaly Level", anomalyLevel, anomalyIntensity > 70 ? "bad" : anomalyIntensity > 40 ? "warn" : "good")}
-`;
+  document.getElementById("predictiveMetrics").innerHTML =
+    metric("Delay Risk", delayRisk + "%") +
+    metric("Predicted Duration", predictedDuration + " ms") +
+    metric("Collapse Probability", collapseProbability + "%") +
+    metric("Momentum", momentumLabel);
+
+  // ===============================
+  // 🧠 QUANT
+  // ===============================
+
+  document.getElementById("quantMetrics").innerHTML =
+    metric("Z-Score", zScore.toFixed(2)) +
+    metric("Anomaly Intensity", anomalyIntensity + "%") +
+    metric("Anomaly Level", anomalyLevel);
 }
 
 loadMonitoring();
