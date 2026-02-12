@@ -122,7 +122,11 @@ header{
 
 .gauge svg{width:130px;height:130px;}
 
-.radar svg{width:260px;height:260px;}
+.radar svg{
+  width:100%;
+  max-width:360px;
+  height:auto;
+}
 
 .sparkline svg{width:100%;height:60px;}
 
@@ -257,9 +261,9 @@ function renderGauge(core,adaptive){
 
 function renderRadar(values){
 
-  const size = 360;            // Bigger canvas
-  const center = size / 2;     // True center
-  const radius = 110;          // Slightly smaller than half
+  const size = 360;
+  const center = size / 2;
+  const radius = 110;
   const axes = values.length;
 
   const labels = ["Delay","Anomaly","Volatility","Health"];
@@ -268,6 +272,8 @@ function renderRadar(values){
   let axisLines = "";
   let labelSVG = "";
   let gridSVG = "";
+  let pointDots = "";
+  let valueLabels = "";
 
   // Grid rings
   for(let r = 1; r <= 4; r++){
@@ -282,7 +288,6 @@ function renderRadar(values){
 
   values.forEach((v,i)=>{
     const angle = (Math.PI*2/axes)*i - Math.PI/2;
-
     const scaled = (v/100)*radius;
 
     const x = center + scaled*Math.cos(angle);
@@ -290,16 +295,17 @@ function renderRadar(values){
 
     polygonPoints += `${x},${y} `;
 
+    // Axis line
     const ax = center + radius*Math.cos(angle);
     const ay = center + radius*Math.sin(angle);
 
     axisLines += `
       <line x1="${center}" y1="${center}"
             x2="${ax}" y2="${ay}"
-            stroke="rgba(255,255,255,0.06)"
+            stroke="rgba(255,255,255,0.08)"
             stroke-width="1"/>`;
 
-    // Push labels OUTSIDE radius safely
+    // Axis label
     const lx = center + (radius + 30)*Math.cos(angle);
     const ly = center + (radius + 30)*Math.sin(angle);
 
@@ -315,6 +321,27 @@ function renderRadar(values){
         dominant-baseline="middle">
         ${labels[i]}
       </text>`;
+
+    // Data point dot
+    pointDots += `
+      <circle cx="${x}" cy="${y}"
+        r="4"
+        fill="#8b5cf6"
+        stroke="#ffffff"
+        stroke-width="1"/>`;
+
+    // Value label next to dot
+    const vx = center + (scaled + 14)*Math.cos(angle);
+    const vy = center + (scaled + 14)*Math.sin(angle);
+
+    valueLabels += `
+      <text x="${vx}" y="${vy}"
+        font-size="11"
+        fill="#e6edf3"
+        text-anchor="middle"
+        dominant-baseline="middle">
+        ${Math.round(v)}
+      </text>`;
   });
 
   return `
@@ -323,9 +350,11 @@ function renderRadar(values){
     ${gridSVG}
     ${axisLines}
     <polygon points="${polygonPoints}"
-      fill="rgba(139,92,246,0.35)"
+      fill="rgba(139,92,246,0.25)"
       stroke="#8b5cf6"
       stroke-width="2"/>
+    ${pointDots}
+    ${valueLabels}
     ${labelSVG}
   </svg>
   </div>`;
@@ -463,14 +492,6 @@ async function load(){
   /* Trend */
   document.getElementById("trendSparkline").innerHTML=
     renderSparkline(stabilityHist);
-let trendLabel = "Flat";
-if (stabilityAccel > 2) trendLabel = "Uptrend";
-if (stabilityAccel < -2) trendLabel = "Downtrend";
-
-document.getElementById("trendSparkline").innerHTML +=
-  `<div class="small" style="margin-top:10px">
-    Trend: ${trendLabel}
-  </div>`;
   
   /* AI Narrative */
   document.getElementById("aiNarrative").innerHTML=
