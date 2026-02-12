@@ -126,51 +126,84 @@ function metric(title, value, colorClass="") {
   `;
 }
 
-async function load() {
-  const data = await fetchMonitor();
-  if (!data) return;
+async function loadMonitoring() {
+  const res = await fetchSnapshots();
+  if (!res) return;
 
-  const ing = data.ingestion;
-  const traffic = data.traffic;
-  const alerts = data.alerts;
+  const { ingestion, traffic, alerts } = res;
 
-  // =======================
-  // Ingestion Section
-  // =======================
-  document.getElementById("ingestionMetrics").innerHTML =
-    metric("Last Snapshot", ing.latest_snapshot) +
-    metric("Rows", ing.row_count) +
-    metric("Chains", ing.chain_count) +
-    metric("Duration (ms)", ing.duration_ms) +
-    metric("SLA %", ing.sla_percent,
-      ing.sla_percent >= 98 ? "good" :
-      ing.sla_percent >= 95 ? "warn" : "bad") +
-    metric("Avg Duration", ing.avg_duration_ms) +
-    metric("Max Duration", ing.max_duration_ms);
+  // ===============================
+  // 🧠 HEALTH GRADE
+  // ===============================
 
-  // =======================
-  // Traffic Section
-  // =======================
-  document.getElementById("trafficMetrics").innerHTML =
-    metric("Today Visits", traffic.today_total) +
-    metric("Today Unique", traffic.today_unique) +
-    metric("Yesterday Visits", traffic.yesterday_total) +
-    metric("Yesterday Unique", traffic.yesterday_unique) +
-    metric("Growth %", traffic.growth_percent,
-      traffic.growth_percent > 0 ? "good" :
-      traffic.growth_percent < 0 ? "bad" : "") +
-    metric("30d Total", traffic.total_30_days) +
-    metric("30d Unique", traffic.unique_30_days);
+  const score = ingestion.health_score;
+  let grade = "A";
+  let color = "#22c55e";
 
-  // =======================
-  // Alerts Section
-  // =======================
-  document.getElementById("alertMetrics").innerHTML =
-    metric("Total Alerts (30d)", alerts.total_last_30_days) +
-    metric("Last Alert Time", alerts.last_alert_time ?? "None",
-      alerts.last_alert_time ? "warn" : "good");
+  if (score < 90) { grade = "B"; color = "#f59e0b"; }
+  if (score < 75) { grade = "C"; color = "#fb923c"; }
+  if (score < 60) { grade = "D"; color = "#ef4444"; }
+
+  document.getElementById("healthStatus").innerHTML = `
+    <div style="font-size:28px;font-weight:700;color:${color}">
+      ${score} / 100
+    </div>
+    <div class="small">Grade: ${grade}</div>
+    <div class="small">
+      ${ingestion.minutes_since_latest} mins since last snapshot
+    </div>
+  `;
+
+  // ===============================
+  // 📊 INGESTION METRICS GRID
+  // ===============================
+
+  document.getElementById("slaStats").innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+
+      <div>Rows<br/><strong>${ingestion.row_count}</strong></div>
+      <div>Chains<br/><strong>${ingestion.chain_count}</strong></div>
+
+      <div>Row Δ %<br/><strong>${ingestion.row_change_percent}%</strong></div>
+      <div>Interval Drift<br/><strong>${ingestion.interval_drift_minutes}m</strong></div>
+
+      <div>SLA<br/><strong>${ingestion.sla_percent}%</strong></div>
+      <div>Total Runs<br/><strong>${ingestion.total_runs}</strong></div>
+
+      <div>Avg Duration<br/><strong>${ingestion.avg_duration_ms} ms</strong></div>
+      <div>P95 Duration<br/><strong>${ingestion.p95_duration_ms} ms</strong></div>
+
+      <div>Max Duration<br/><strong>${ingestion.max_duration_ms} ms</strong></div>
+
+    </div>
+  `;
+
+  // ===============================
+  // 📈 TRAFFIC METRICS GRID
+  // ===============================
+
+  document.getElementById("alertLog").innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+
+      <div>Today Visits<br/><strong>${traffic.today_total}</strong></div>
+      <div>Today Unique<br/><strong>${traffic.today_unique}</strong></div>
+
+      <div>Yesterday Visits<br/><strong>${traffic.yesterday_total}</strong></div>
+      <div>Yesterday Unique<br/><strong>${traffic.yesterday_unique}</strong></div>
+
+      <div>Growth %<br/><strong>${traffic.growth_percent}%</strong></div>
+      <div>30d Total<br/><strong>${traffic.total_30_days}</strong></div>
+
+      <div>30d Unique<br/><strong>${traffic.unique_30_days}</strong></div>
+
+    </div>
+    <hr style="margin:14px 0;border-color:#1f2937"/>
+    <div>
+      Alerts (48 runs): <strong>${alerts.total_last_48_runs}</strong><br/>
+      Last Alert: <strong>${alerts.last_alert_time || "None"}</strong>
+    </div>
+  `;
 }
-
 load();
 setInterval(load, 60000);
 
