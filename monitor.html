@@ -108,6 +108,11 @@ header {
 <h3>🧠 Quant Intelligence</h3>
 <div id="quantMetrics" class="grid"></div>
   </div>
+
+  <div class="card">
+  <h3>🎲 Probabilistic Modeling</h3>
+  <div id="probabilityMetrics" class="grid"></div>
+  </div>
   
 </div>
 
@@ -214,6 +219,64 @@ async function loadMonitoring() {
   );
 
   predictedDuration = Math.round(predictedDuration);
+
+  // ===============================
+// 🎲 MONTE CARLO DELAY SIMULATION
+// ===============================
+
+function randomNormal(mean, stdDev) {
+  let u = 0, v = 0;
+  while(u === 0) u = Math.random();
+  while(v === 0) v = Math.random();
+  return mean + stdDev * Math.sqrt(-2.0 * Math.log(u)) *
+         Math.cos(2.0 * Math.PI * v);
+}
+
+let delaySimulations = 300;
+let delayFailures = 0;
+
+for (let i = 0; i < delaySimulations; i++) {
+  const simulatedDuration = randomNormal(avg, (p95 - avg) / 1.645);
+
+  // assume ingestion becomes unstable if duration spikes heavily
+  if (simulatedDuration > avg * 1.6) {
+    delayFailures++;
+  }
+}
+
+let monteCarloDelayProbability =
+  Math.round((delayFailures / delaySimulations) * 100);
+
+  // ===============================
+// 📉 EWMA TREND ENGINE
+// ===============================
+
+const alpha = 0.3; // smoothing factor
+
+// Synthetic short memory model
+let ewma = avg;
+
+ewma = alpha * latest + (1 - alpha) * ewma;
+
+let ewmaTrend = "Flat";
+
+if (ewma > avg * 1.05) ewmaTrend = "Uptrend";
+if (ewma < avg * 0.95) ewmaTrend = "Downtrend";
+
+  // ===============================
+// 🚀 DRIFT ACCELERATION DETECTOR
+// ===============================
+
+let driftAcceleration = 0;
+
+if (drift > 0) {
+  driftAcceleration = drift * volatility;
+}
+
+let accelerationLevel = "Normal";
+
+if (driftAcceleration > 5) accelerationLevel = "Elevating";
+if (driftAcceleration > 10) accelerationLevel = "Accelerating";
 
   // ===============================
   // 🧮 Z-SCORE ANOMALY ENGINE
@@ -338,6 +401,11 @@ async function loadMonitoring() {
     metric("Z-Score", zScore.toFixed(2)) +
     metric("Anomaly Intensity", anomalyIntensity + "%") +
     metric("Anomaly Level", anomalyLevel);
+
+  document.getElementById("probabilityMetrics").innerHTML =
+  metric("Monte Carlo Delay Risk", monteCarloDelayProbability + "%") +
+  metric("EWMA Trend", ewmaTrend) +
+  metric("Drift Acceleration", accelerationLevel);
 }
 
 loadMonitoring();
