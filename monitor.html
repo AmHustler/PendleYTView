@@ -99,6 +99,11 @@ header {
 <div id="alertMetrics" class="grid"></div>
 </div>
 
+  <div class="card">
+<h3>🔮 Predictive Intelligence</h3>
+<div id="predictiveMetrics" class="grid"></div>
+  </div>
+  
 </div>
 
 <script>
@@ -143,6 +148,44 @@ async function loadMonitoring() {
   if (!res) return;
 
   const { ingestion, traffic, alerts } = res;
+
+  // ===============================
+// 🔮 PREDICTIVE INTELLIGENCE ENGINE
+// ===============================
+
+const durationsSpread = ingestion.p95_duration_ms - ingestion.avg_duration_ms;
+const durationVolatilityScore = durationsSpread / ingestion.avg_duration_ms;
+
+let delayRisk = 0;
+let durationRisk = 0;
+let anomalyRisk = 0;
+
+// Delay Risk
+if (ingestion.minutes_since_latest > 50) delayRisk += 30;
+if (ingestion.interval_drift_minutes > 5) delayRisk += 25;
+if (ingestion.sla_percent < 98) delayRisk += 20;
+
+// Duration Risk
+if (durationVolatilityScore > 0.5) durationRisk += 30;
+if (ingestion.max_duration_ms > ingestion.avg_duration_ms * 1.5) durationRisk += 30;
+if (ingestion.p95_duration_ms > ingestion.avg_duration_ms * 1.3) durationRisk += 20;
+
+// Row Risk
+if (Math.abs(parseFloat(ingestion.row_change_percent)) > 5) anomalyRisk += 30;
+
+// Normalize (0–100 cap)
+delayRisk = Math.min(delayRisk, 100);
+durationRisk = Math.min(durationRisk, 100);
+anomalyRisk = Math.min(anomalyRisk, 100);
+
+// Confidence Model
+let predictiveConfidence = 100 - (
+  (delayRisk * 0.4) +
+  (durationRisk * 0.3) +
+  (anomalyRisk * 0.3)
+);
+
+if (predictiveConfidence < 0) predictiveConfidence = 0;
 
   // ===============================
 // 🟢 STATUS BANNER + NEXT SNAPSHOT
@@ -210,6 +253,13 @@ else {
   document.getElementById("alertMetrics").innerHTML =
     metric("Alerts (Last 48 Runs)", alerts.total_last_48_runs) +
     metric("Last Alert", alerts.last_alert_time || "None");
+
+  document.getElementById("predictiveMetrics").innerHTML = `
+  ${metric("Delay Risk", delayRisk + "%", delayRisk > 60 ? "bad" : delayRisk > 40 ? "warn" : "good")}
+  ${metric("Duration Spike Risk", durationRisk + "%", durationRisk > 60 ? "bad" : durationRisk > 40 ? "warn" : "good")}
+  ${metric("Row Instability Risk", anomalyRisk + "%", anomalyRisk > 60 ? "bad" : anomalyRisk > 40 ? "warn" : "good")}
+  ${metric("Predictive Confidence", Math.round(predictiveConfidence) + "%", predictiveConfidence > 70 ? "good" : predictiveConfidence > 50 ? "warn" : "bad")}
+`;
 }
 
 loadMonitoring();
