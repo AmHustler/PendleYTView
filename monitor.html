@@ -249,59 +249,123 @@ function renderGauge(core,adaptive){
 }
 
 function renderRadar(values){
-  const center=130;
-  const radius=100;
-  const labels=["Delay","Anomaly","Volatility","Health"];
-  const axes=values.length;
-  let points="";
-  let labelsSVG="";
+  const size = 320;
+  const center = size / 2;
+  const radius = 110;
+  const axes = values.length;
+  const labels = ["Delay","Anomaly","Volatility","Health"];
+
+  let polygonPoints = "";
+  let labelSVG = "";
+  let gridSVG = "";
+
+  // Draw grid rings
+  for(let r = 1; r <= 4; r++){
+    const ringRadius = (r/4) * radius;
+    gridSVG += `
+      <circle cx="${center}" cy="${center}"
+        r="${ringRadius}"
+        fill="none"
+        stroke="rgba(255,255,255,0.05)"
+        stroke-width="1"/>`;
+  }
 
   values.forEach((v,i)=>{
-    const angle=(Math.PI*2/axes)*i - Math.PI/2;
-    const r=(v/100)*radius;
-    const x=center+r*Math.cos(angle);
-    const y=center+r*Math.sin(angle);
-    points+=`${x},${y} `;
+    const angle = (Math.PI*2/axes)*i - Math.PI/2;
 
-    const lx=center+(radius+18)*Math.cos(angle);
-    const ly=center+(radius+18)*Math.sin(angle);
-    labelsSVG+=`
+    const scaledRadius = (v/100) * radius;
+    const x = center + scaledRadius*Math.cos(angle);
+    const y = center + scaledRadius*Math.sin(angle);
+
+    polygonPoints += `${x},${y} `;
+
+    // Axis line
+    const ax = center + radius*Math.cos(angle);
+    const ay = center + radius*Math.sin(angle);
+
+    gridSVG += `
+      <line x1="${center}" y1="${center}"
+            x2="${ax}" y2="${ay}"
+            stroke="rgba(255,255,255,0.05)"
+            stroke-width="1"/>`;
+
+    // Label position (extra padding)
+    const lx = center + (radius + 25)*Math.cos(angle);
+    const ly = center + (radius + 25)*Math.sin(angle);
+
+    let anchor = "middle";
+    if(Math.cos(angle) > 0.3) anchor = "start";
+    if(Math.cos(angle) < -0.3) anchor = "end";
+
+    labelSVG += `
       <text x="${lx}" y="${ly}"
-        font-size="11"
+        font-size="12"
         fill="#8b98b8"
-        text-anchor="middle">
+        text-anchor="${anchor}">
         ${labels[i]}
       </text>`;
   });
 
   return `
-  <svg>
-    <polygon points="${points}"
+  <svg width="${size}" height="${size}">
+    ${gridSVG}
+    <polygon points="${polygonPoints}"
       fill="rgba(139,92,246,0.35)"
       stroke="#8b5cf6"
       stroke-width="2"/>
-    ${labelsSVG}
+    ${labelSVG}
   </svg>`;
 }
 
 function renderSparkline(values){
-  if(values.length<2) return "";
-  const width=500,height=60;
-  const max=Math.max(...values);
-  const min=Math.min(...values);
-  const range=max-min||1;
 
-  const points=values.map((v,i)=>{
-    const x=(i/(values.length-1))*width;
-    const y=height-((v-min)/range)*height;
+  if(values.length < 3) return "<div class='small'>Collecting data...</div>";
+
+  const width = 500;
+  const height = 70;
+
+  // EWMA smoothing
+  const alpha = 0.4;
+  let ewma = values[0];
+  let smooth = [];
+
+  for(let i=0;i<values.length;i++){
+    ewma = alpha*values[i] + (1-alpha)*ewma;
+    smooth.push(ewma);
+  }
+
+  const max = Math.max(...smooth);
+  const min = Math.min(...smooth);
+  const range = max-min || 1;
+
+  const points = smooth.map((v,i)=>{
+    const x = (i/(smooth.length-1))*width;
+    const y = height - ((v-min)/range)*height;
     return `${x},${y}`;
   }).join(" ");
 
+  const areaPoints = `0,${height} ${points} ${width},${height}`;
+
+  // Momentum detection
+  const momentum = smooth[smooth.length-1] - smooth[smooth.length-3];
+
+  let color = "#06b6d4";
+  let label = "Flat";
+
+  if(momentum > 2){ color="#22c55e"; label="Uptrend"; }
+  if(momentum < -2){ color="#ef4444"; label="Downtrend"; }
+
   return `
+  <div style="margin-bottom:8px;font-size:12px;color:#8b98b8">
+    Trend: ${label}
+  </div>
   <svg viewBox="0 0 ${width} ${height}">
+    <polygon points="${areaPoints}"
+      fill="${color}"
+      opacity="0.1"/>
     <polyline points="${points}"
       fill="none"
-      stroke="#06b6d4"
+      stroke="${color}"
       stroke-width="2"/>
   </svg>`;
 }
