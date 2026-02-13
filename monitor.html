@@ -80,6 +80,17 @@ header{
   gap:16px;
 }
 
+  .tooltip{
+  right:auto;
+  max-width:220px;
+  word-wrap:break-word;
+  }
+
+  .metric:last-child .tooltip{
+  left:auto;
+  right:0;
+  }
+
 .metric{
   background:rgba(15,22,40,0.7);
   padding:14px;
@@ -242,16 +253,17 @@ async function fetchMonitor(){
 }
 
 function toggleTooltip(id){
-  document.querySelectorAll(".tooltip").forEach(t=>t.style.display="none");
   const el=document.getElementById(id);
-  el.style.display="block";
-}
-
-document.addEventListener("click",e=>{
-  if(!e.target.classList.contains("info-icon")){
-    document.querySelectorAll(".tooltip").forEach(t=>t.style.display="none");
+  const isVisible = el.classList.contains("active");
+  document.querySelectorAll(".tooltip").forEach(t=>{
+    t.classList.remove("active");
+    t.style.display="none";
+  });
+  if(!isVisible){
+    el.classList.add("active");
+    el.style.display="block";
   }
-});
+}
 
 function metric(title,value,bar,color,desc){
   const id="tip_"+Math.random().toString(36).slice(2,8);
@@ -272,7 +284,7 @@ function metric(title,value,bar,color,desc){
 function renderRadar(values){
   const size=420;
   const center=size/2;
-  const radius=130;
+  const radius=120;
   const labels=["Delay","Anomaly","Volatility","Health"];
   let poly="",axes="",grid="",dots="",vals="",texts="";
 
@@ -282,6 +294,14 @@ function renderRadar(values){
   }
 
   values.forEach((v,i)=>{
+  const angle=(Math.PI*2/values.length)*i - Math.PI/2;
+  const ax=center+radius*Math.cos(angle);
+  const ay=center+radius*Math.sin(angle);
+  axes+=`<line x1="${center}" y1="${center}" x2="${ax}" y2="${ay}" 
+  stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+});
+
+  values.forEach((v,i)=>{
     const angle=(Math.PI*2/values.length)*i - Math.PI/2;
     const scaled=(v/100)*radius;
     const x=center+scaled*Math.cos(angle);
@@ -289,14 +309,15 @@ function renderRadar(values){
     poly+=`${x},${y} `;
     dots+=`<circle cx="${x}" cy="${y}" r="4" fill="#8b5cf6" stroke="#fff"/>`;
     vals+=`<text x="${x}" y="${y-10}" font-size="11" fill="#fff" text-anchor="middle">${Math.round(v)}</text>`;
-    const lx=center+(radius+22)*Math.cos(angle);
-    const ly=center+(radius+22)*Math.sin(angle);
+    const lx=center+(radius+32)*Math.cos(angle);
+    const ly=center+(radius+32)*Math.sin(angle);
     texts+=`<text x="${lx}" y="${ly}" font-size="12" fill="#8b98b8" text-anchor="middle">${labels[i]}</text>`;
   });
 
   return `
   <svg width="${size}" height="${size}">
     ${grid}
+    ${axes}
     <polygon points="${poly}" fill="rgba(139,92,246,0.25)" stroke="#8b5cf6" stroke-width="2"/>
     ${dots}
     ${vals}
@@ -307,7 +328,8 @@ function renderRadar(values){
 function renderSparkline(values){
   if(values.length<3) return "<div class='small'>Collecting...</div>";
   const width=500,height=70;
-  const max=Math.max(...values),min=Math.min(...values);
+  const max=Math.max(...values,100);
+const min=Math.min(...values,0);
   const range=max-min||1;
   const points=values.map((v,i)=>{
     const x=(i/(values.length-1))*width;
@@ -336,7 +358,11 @@ async function load(){
   const drift=parseFloat(ingestion.interval_drift_minutes);
   const mins=ingestion.minutes_since_latest;
   const volatility=(p95-avg)/avg;
-  const z=(latest-avg)/((p95-avg)/1.645||1);
+  let z = 0;
+const std = (p95 - avg) / 1.645;
+if (std > 0) {
+  z = (latest - avg) / std;
+}
   const anomaly=Math.min(Math.abs(z)*20,100);
   const delayRisk=Math.min((mins>50?25:0)+(drift>5?20:0)+(volatility>0.4?20:0),100);
   const composite=Math.round(ingestion.health_score*0.5+(100-delayRisk)*0.3+(100-anomaly)*0.2);
