@@ -357,6 +357,24 @@ async function load(){
   const latest=ingestion.duration_ms;
   const drift=parseFloat(ingestion.interval_drift_minutes);
   const mins=ingestion.minutes_since_latest;
+  /* ===== STATUS BANNER ===== */
+const banner=document.getElementById("statusBanner");
+
+if(mins <= 60){
+  banner.style.background="rgba(34,197,94,0.15)";
+  banner.style.color="#22c55e";
+  banner.innerHTML="SYSTEM STABLE";
+}
+else if(mins <= 75){
+  banner.style.background="rgba(245,158,11,0.15)";
+  banner.style.color="#f59e0b";
+  banner.innerHTML="SYSTEM DELAYED";
+}
+else{
+  banner.style.background="rgba(239,68,68,0.15)";
+  banner.style.color="#ef4444";
+  banner.innerHTML="SYSTEM DEGRADED";
+}
   const volatility=(p95-avg)/avg;
   let z = 0;
 const std = (p95 - avg) / 1.645;
