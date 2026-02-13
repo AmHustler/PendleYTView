@@ -187,6 +187,37 @@
       }
 
       const r = json.data[0];
+      // Fetch last two hourly buckets for delta calculations
+const histRes = await fetch(
+  "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      yt_address: ytAddress,
+      chain_id: chainId,
+      timeframe: "hour",
+      limit: 2
+    }),
+  }
+);
+
+const histJson = await histRes.json();
+
+let dUY = 0, dIY = 0, dSpread = 0;
+
+if (histJson.success && histJson.data.length >= 2) {
+  const latest = histJson.data[0];
+  const prev   = histJson.data[1];
+
+  dUY = Number(latest.underlying_yield) - Number(prev.underlying_yield);
+  dIY = Number(latest.implied_yield)    - Number(prev.implied_yield);
+
+  const latestSpread = Number(latest.underlying_yield) - Number(latest.implied_yield);
+  const prevSpread   = Number(prev.underlying_yield)   - Number(prev.implied_yield);
+
+  dSpread = latestSpread - prevSpread;
+}
       const body = document.getElementById("detailsBody");
 
       const rows = [
@@ -196,7 +227,10 @@
         ["Expiry Date", new Date(r.expiry).toUTCString()],
         ["Time to Expiry", `${daysToExpiry(r.expiry)} days`],
         ["Underlying Yield", pct(r.underlying_yield)],
-        ["Implied Yield", pct(r.implied_yield)],
+["∆ Underlying Yield (1H)", (dUY * 100).toFixed(3) + "%"],
+["Implied Yield", pct(r.implied_yield)],
+["∆ Implied Yield (1H)", (dIY * 100).toFixed(3) + "%"],
+["∆ Spread (1H)", (dSpread * 100).toFixed(3) + "%"],
         ["Current Yield", pct(r.net_yield)],
         ["Net APY", pct(r.net_apy_to_maturity)],
         ["Last Updated", new Date(r.snapshot_time).toUTCString()],
