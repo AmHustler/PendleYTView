@@ -64,6 +64,12 @@ header{
   border-radius:16px;
   padding:22px;
   border:1px solid var(--border);
+  transition: 0.3s ease;
+}
+
+.card:hover{
+  border-color: rgba(139,92,246,0.4);
+}
 }
 
 .card h3{
@@ -328,8 +334,8 @@ function renderRadar(values){
 function renderSparkline(values){
   if(values.length<3) return "<div class='small'>Collecting...</div>";
   const width=500,height=70;
-  const max=Math.max(...values,100);
-const min=Math.min(...values,0);
+  const max=Math.max(...values);
+const min=Math.min(...values);
   const range=max-min||1;
   const points=values.map((v,i)=>{
     const x=(i/(values.length-1))*width;
@@ -375,7 +381,7 @@ else{
   banner.style.color="#ef4444";
   banner.innerHTML="SYSTEM DEGRADED";
 }
-  const volatility=(p95-avg)/avg;
+  const volatility = avg > 0 ? (p95 - avg) / avg : 0;
   let z = 0;
 const std = (p95 - avg) / 1.645;
 if (std > 0) {
@@ -383,8 +389,18 @@ if (std > 0) {
 }
   const anomaly=Math.min(Math.abs(z)*20,100);
   const delayRisk=Math.min((mins>50?25:0)+(drift>5?20:0)+(volatility>0.4?20:0),100);
-  const composite=Math.round(ingestion.health_score*0.5+(100-delayRisk)*0.3+(100-anomaly)*0.2);
-
+  const composite=Math.round(
+  ingestion.health_score*0.6+
+  (100-delayRisk)*0.25+
+  (100-anomaly)*0.15
+);
+const stabilityEl = document.getElementById("stabilityIndex");
+stabilityEl.style.transition = "0.3s ease";
+stabilityEl.style.transform = "scale(1.02)";
+setTimeout(()=> {
+  stabilityEl.style.transform = "scale(1)";
+}, 200);
+  
   function push(k,v){
     let arr=JSON.parse(localStorage.getItem(k)||"[]");
     arr.push(v); if(arr.length>20) arr.shift();
