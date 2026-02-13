@@ -203,6 +203,10 @@ const histRes = await fetch(
 );
 
 const histJson = await histRes.json();
+      document.body.innerHTML +=
+  "<pre style='font-size:10px'>" +
+  JSON.stringify(histJson, null, 2) +
+  "</pre>";
 
 let dUY = 0, dIY = 0, dSpread = 0;
 
