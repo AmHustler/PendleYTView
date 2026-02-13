@@ -164,6 +164,17 @@
       return (Number(num) * 100).toFixed(2) + "%";
     }
 
+    function pctDelta(num) {
+  const percent = Number(num) * 100;
+
+  if (Math.abs(percent) < 0.00005) {
+    return "≈ 0.0000%";
+  }
+
+  const sign = percent > 0 ? "+" : "";
+  return sign + percent.toFixed(4) + "%";
+    }
+    
     function chainName(id) {
       if (id === "1") return "Ethereum";
       if (id === "42161") return "Arbitrum";
@@ -203,11 +214,7 @@ const histRes = await fetch(
 );
 
 const histJson = await histRes.json();
-      document.body.innerHTML +=
-  "<pre style='font-size:10px'>" +
-  JSON.stringify(histJson, null, 2) +
-  "</pre>";
-
+  
 let dUY = 0, dIY = 0, dSpread = 0;
 
 if (histJson.success && histJson.data.length >= 2) {
@@ -232,9 +239,9 @@ if (histJson.success && histJson.data.length >= 2) {
         ["Time to Expiry", `${daysToExpiry(r.expiry)} days`],
         ["Underlying Yield", pct(r.underlying_yield)],
         ["Implied Yield", pct(r.implied_yield)],
-        ["Δ Underlying Yield", (dUY * 100).toFixed(4) + "%"],
-        ["Δ Implied Yield", (dIY * 100).toFixed(4) + "%"],
-        ["Δ Spread", (dSpread * 100).toFixed(4) + "%"],
+        ["Δ Underlying Yield", pctDelta(dUY)],
+        ["Δ Implied Yield", pctDelta(dIY)],
+        ["Δ Spread", pctDelta(dSpread)],
         ["Current Yield", pct(r.net_yield)],
         ["Net APY", pct(r.net_apy_to_maturity)],
         ["Last Updated", new Date(r.snapshot_time).toUTCString()],
