@@ -80,18 +80,18 @@ header{
   gap:16px;
 }
 
-  .radar {
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  padding:20px 0;
-  }
-
 .metric{
   background:rgba(15,22,40,0.7);
   padding:14px;
   border-radius:10px;
   border:1px solid rgba(255,255,255,0.04);
+  position:relative;
+}
+
+.metric-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
 .metric-title{
@@ -106,7 +106,37 @@ header{
   margin-top:4px;
 }
 
-.small{font-size:12px;color:var(--muted);}
+.info-icon{
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.08);
+  font-size:11px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:0.2s ease;
+}
+
+.info-icon:hover{
+  background:rgba(139,92,246,0.4);
+}
+
+.tooltip{
+  position:absolute;
+  bottom:100%;
+  left:0;
+  margin-bottom:8px;
+  background:#111827;
+  border:1px solid rgba(255,255,255,0.08);
+  padding:10px;
+  border-radius:8px;
+  font-size:12px;
+  max-width:220px;
+  display:none;
+  z-index:999;
+}
 
 .progress{
   height:5px;
@@ -120,15 +150,16 @@ header{
   border-radius:4px;
 }
 
-.gauge svg{width:130px;height:130px;}
-
 .radar svg{
   width:100%;
   max-width:420px;
   height:auto;
 }
 
-.sparkline svg{width:100%;height:60px;}
+.sparkline svg{
+  width:100%;
+  height:70px;
+}
 
 .index-panel{
   text-align:center;
@@ -140,6 +171,7 @@ header{
 }
 
 .index-score{font-size:36px;font-weight:700;}
+.small{font-size:12px;color:var(--muted);}
 </style>
 </head>
 
@@ -160,7 +192,6 @@ header{
 <div class="card">
   <h3>System Stability</h3>
   <div id="stabilityIndex"></div>
-  <div id="healthGauge"></div>
 </div>
 
 <div class="card">
@@ -170,12 +201,12 @@ header{
 
 <div class="card">
   <h3>Risk Radar</h3>
-  <div id="riskRadar" class="radar"></div>
+  <div id="riskRadar" style="display:flex;justify-content:center;"></div>
 </div>
 
 <div class="card">
   <h3>Trend Momentum</h3>
-  <div id="trendSparkline" class="sparkline"></div>
+  <div id="trendSparkline"></div>
 </div>
 
 <div class="card">
@@ -185,13 +216,12 @@ header{
 
 <div class="card">
   <h3>Autonomous Intelligence Layer</h3>
-  <div id="autonomyPanel"></div>
+  <div id="autonomyPanel" class="grid"></div>
 </div>
 
 </div>
 
 <script>
-/* ================= AUTH ================= */
 let password=sessionStorage.getItem("admin_secret");
 if(!password){
   password=prompt("Enter Admin Password:");
@@ -211,214 +241,93 @@ async function fetchMonitor(){
   return await res.json();
 }
 
-/* ================= UTILITIES ================= */
-
-function metric(title,value,bar=null,color="#22c55e"){
-  return `
-  <div class="metric">
-    <div class="metric-title">${title}</div>
-    <div class="metric-value">${value}</div>
-    ${bar?`
-      <div class="progress">
-        <div class="progress-fill" 
-          style="width:${bar}%;background:${color}">
-        </div>
-      </div>`:""}
-  </div>`;
+function toggleTooltip(id){
+  document.querySelectorAll(".tooltip").forEach(t=>t.style.display="none");
+  const el=document.getElementById(id);
+  el.style.display="block";
 }
 
-function renderGauge(core,adaptive){
-  const r=50;
-  const c=2*Math.PI*r;
-
-  function ring(score,color,width){
-    const offset=c-(score/100)*c;
-    return `
-      <circle cx="65" cy="65" r="${r}"
-        stroke="${color}"
-        stroke-width="${width}"
-        fill="none"
-        stroke-dasharray="${c}"
-        stroke-dashoffset="${offset}"
-        stroke-linecap="round"
-        transform="rotate(-90 65 65)"/>`;
+document.addEventListener("click",e=>{
+  if(!e.target.classList.contains("info-icon")){
+    document.querySelectorAll(".tooltip").forEach(t=>t.style.display="none");
   }
+});
 
+function metric(title,value,bar,color,desc){
+  const id="tip_"+Math.random().toString(36).slice(2,8);
   return `
-  <svg>
-    <circle cx="65" cy="65" r="${r}"
-      stroke="rgba(255,255,255,0.06)"
-      stroke-width="6"
-      fill="none"/>
-    ${ring(core,"#22c55e",6)}
-    ${ring(adaptive,"#8b5cf6",3)}
-  </svg>
-  <div>
-    <div style="font-size:28px;font-weight:700">${core}</div>
-    <div class="small">Adaptive ${adaptive}</div>
+  <div class="metric">
+    <div class="metric-header">
+      <div class="metric-title">${title}</div>
+      <div class="info-icon" onclick="toggleTooltip('${id}')">i</div>
+    </div>
+    <div class="metric-value">${value}</div>
+    ${bar?`<div class="progress">
+        <div class="progress-fill" style="width:${bar}%;background:${color}"></div>
+      </div>`:""}
+    <div class="tooltip" id="${id}">${desc}</div>
   </div>`;
 }
 
 function renderRadar(values){
+  const size=420;
+  const center=size/2;
+  const radius=130;
+  const labels=["Delay","Anomaly","Volatility","Health"];
+  let poly="",axes="",grid="",dots="",vals="",texts="";
 
-  const size = 420;        // bigger canvas
-const padding = 40;      // safe label space
-const center = size / 2;
-const radius = 130;      // slightly bigger radar
-  const axes = values.length;
-
-  const labels = ["Delay","Anomaly","Volatility","Health"];
-
-  let polygonPoints = "";
-  let axisLines = "";
-  let labelSVG = "";
-  let gridSVG = "";
-  let pointDots = "";
-  let valueLabels = "";
-
-  // Grid rings
-  for(let r = 1; r <= 4; r++){
-    const ring = (r/4) * radius;
-    gridSVG += `
-      <circle cx="${center}" cy="${center}"
-        r="${ring}"
-        fill="none"
-        stroke="rgba(255,255,255,0.06)"
-        stroke-width="1"/>`;
+  for(let r=1;r<=4;r++){
+    grid+=`<circle cx="${center}" cy="${center}" r="${(r/4)*radius}"
+    fill="none" stroke="rgba(255,255,255,0.05)"/>`;
   }
 
   values.forEach((v,i)=>{
-    const angle = (Math.PI*2/axes)*i - Math.PI/2;
-    const scaled = (v/100)*radius;
-
-    const x = center + scaled*Math.cos(angle);
-    const y = center + scaled*Math.sin(angle);
-
-    polygonPoints += `${x},${y} `;
-
-    // Axis line
-    const ax = center + radius*Math.cos(angle);
-    const ay = center + radius*Math.sin(angle);
-
-    axisLines += `
-      <line x1="${center}" y1="${center}"
-            x2="${ax}" y2="${ay}"
-            stroke="rgba(255,255,255,0.08)"
-            stroke-width="1"/>`;
-
-    // Axis label
-    const lx = center + (radius + 18)*Math.cos(angle);
-const ly = center + (radius + 18)*Math.sin(angle);
-    let anchor = "middle";
-    if(Math.cos(angle) > 0.3) anchor = "start";
-    if(Math.cos(angle) < -0.3) anchor = "end";
-
-    labelSVG += `
-      <text x="${lx}" y="${ly}"
-        font-size="12"
-        fill="#8b98b8"
-        text-anchor="${anchor}"
-        dominant-baseline="middle">
-        ${labels[i]}
-      </text>`;
-
-    // Data point dot
-    pointDots += `
-      <circle cx="${x}" cy="${y}"
-        r="4"
-        fill="#8b5cf6"
-        stroke="#ffffff"
-        stroke-width="1"/>`;
-
-    // Value label next to dot
-    const vx = center + (scaled + 14)*Math.cos(angle);
-    const vy = center + (scaled + 14)*Math.sin(angle);
-
-    valueLabels += `
-      <text x="${vx}" y="${vy}"
-        font-size="11"
-        fill="#e6edf3"
-        text-anchor="middle"
-        dominant-baseline="middle">
-        ${Math.round(v)}
-      </text>`;
+    const angle=(Math.PI*2/values.length)*i - Math.PI/2;
+    const scaled=(v/100)*radius;
+    const x=center+scaled*Math.cos(angle);
+    const y=center+scaled*Math.sin(angle);
+    poly+=`${x},${y} `;
+    dots+=`<circle cx="${x}" cy="${y}" r="4" fill="#8b5cf6" stroke="#fff"/>`;
+    vals+=`<text x="${x}" y="${y-10}" font-size="11" fill="#fff" text-anchor="middle">${Math.round(v)}</text>`;
+    const lx=center+(radius+22)*Math.cos(angle);
+    const ly=center+(radius+22)*Math.sin(angle);
+    texts+=`<text x="${lx}" y="${ly}" font-size="12" fill="#8b98b8" text-anchor="middle">${labels[i]}</text>`;
   });
 
   return `
-  <div style="display:flex;justify-content:center;">
   <svg width="${size}" height="${size}">
-    ${gridSVG}
-    ${axisLines}
-    <polygon points="${polygonPoints}"
-      fill="rgba(139,92,246,0.25)"
-      stroke="#8b5cf6"
-      stroke-width="2"/>
-    ${pointDots}
-    ${valueLabels}
-    ${labelSVG}
-  </svg>
-  </div>`;
-}
-
-function renderSparkline(values){
-
-  if(values.length < 3) return "<div class='small'>Collecting data...</div>";
-
-  const width = 500;
-  const height = 70;
-
-  // EWMA smoothing
-  const alpha = 0.4;
-  let ewma = values[0];
-  let smooth = [];
-
-  for(let i=0;i<values.length;i++){
-    ewma = alpha*values[i] + (1-alpha)*ewma;
-    smooth.push(ewma);
-  }
-
-  const max = Math.max(...smooth);
-  const min = Math.min(...smooth);
-  const range = max-min || 1;
-
-  const points = smooth.map((v,i)=>{
-    const x = (i/(smooth.length-1))*width;
-    const y = height - ((v-min)/range)*height;
-    return `${x},${y}`;
-  }).join(" ");
-
-  const areaPoints = `0,${height} ${points} ${width},${height}`;
-
-  // Momentum detection
-  const momentum = smooth[smooth.length-1] - smooth[smooth.length-3];
-
-  let color = "#06b6d4";
-  let label = "Flat";
-
-  if(momentum > 2){ color="#22c55e"; label="Uptrend"; }
-  if(momentum < -2){ color="#ef4444"; label="Downtrend"; }
-
-  return `
-  <div style="margin-bottom:8px;font-size:12px;color:#8b98b8">
-    Trend: ${label}
-  </div>
-  <svg viewBox="0 0 ${width} ${height}">
-    <polygon points="${areaPoints}"
-      fill="${color}"
-      opacity="0.1"/>
-    <polyline points="${points}"
-      fill="none"
-      stroke="${color}"
-      stroke-width="2"/>
+    ${grid}
+    <polygon points="${poly}" fill="rgba(139,92,246,0.25)" stroke="#8b5cf6" stroke-width="2"/>
+    ${dots}
+    ${vals}
+    ${texts}
   </svg>`;
 }
 
-/* ================= MAIN ================= */
+function renderSparkline(values){
+  if(values.length<3) return "<div class='small'>Collecting...</div>";
+  const width=500,height=70;
+  const max=Math.max(...values),min=Math.min(...values);
+  const range=max-min||1;
+  const points=values.map((v,i)=>{
+    const x=(i/(values.length-1))*width;
+    const y=height-((v-min)/range)*height;
+    return `${x},${y}`;
+  }).join(" ");
+  const delta=values[values.length-1]-values[values.length-2];
+  let label="Flat",color="#06b6d4";
+  if(delta>2){label="Uptrend";color="#22c55e";}
+  if(delta<-2){label="Downtrend";color="#ef4444";}
+  return `
+  <div class="small" style="margin-bottom:6px">Trend: ${label}</div>
+  <svg viewBox="0 0 ${width} ${height}">
+    <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2"/>
+  </svg>`;
+}
 
 async function load(){
   const res=await fetchMonitor();
   if(!res) return;
-
   const {ingestion}=res;
 
   const avg=ingestion.avg_duration_ms;
@@ -426,74 +335,43 @@ async function load(){
   const latest=ingestion.duration_ms;
   const drift=parseFloat(ingestion.interval_drift_minutes);
   const mins=ingestion.minutes_since_latest;
-
   const volatility=(p95-avg)/avg;
-  const approxStd=(p95-avg)/1.645;
-  const z=approxStd>0?(latest-avg)/approxStd:0;
+  const z=(latest-avg)/((p95-avg)/1.645||1);
   const anomaly=Math.min(Math.abs(z)*20,100);
   const delayRisk=Math.min((mins>50?25:0)+(drift>5?20:0)+(volatility>0.4?20:0),100);
+  const composite=Math.round(ingestion.health_score*0.5+(100-delayRisk)*0.3+(100-anomaly)*0.2);
 
-  const composite=Math.round(
-    ingestion.health_score*0.5+
-    (100-delayRisk)*0.3+
-    (100-anomaly)*0.2
-  );
-
-  /* Memory */
-  function push(key,val){
-    let arr=JSON.parse(localStorage.getItem(key)||"[]");
-    arr.push(val);
-    if(arr.length>20) arr.shift();
-    localStorage.setItem(key,JSON.stringify(arr));
+  function push(k,v){
+    let arr=JSON.parse(localStorage.getItem(k)||"[]");
+    arr.push(v); if(arr.length>20) arr.shift();
+    localStorage.setItem(k,JSON.stringify(arr));
   }
-
   push("stability",composite);
-  const stabilityHist=JSON.parse(localStorage.getItem("stability"));
+  const hist=JSON.parse(localStorage.getItem("stability"));
 
-  /* Banner */
-  const banner=document.getElementById("statusBanner");
-  if(mins<=60){
-    banner.style.background="#052e16";
-    banner.style.color="#22c55e";
-    banner.innerHTML="SYSTEM STABLE";
-  } else {
-    banner.style.background="#3f0f12";
-    banner.style.color="#ef4444";
-    banner.innerHTML="SYSTEM DEGRADED";
-  }
-
-  /* Executive */
   document.getElementById("executiveStrip").innerHTML=
     `Stability ${composite} | Delay ${delayRisk}% | Anomaly ${Math.round(anomaly)}%`;
 
-  /* Stability */
   document.getElementById("stabilityIndex").innerHTML=
     `<div class="index-panel">
       <div class="index-score">${composite}</div>
       <div class="small">Institutional Stability Index</div>
-     </div>`;
+    </div>`;
 
-  document.getElementById("healthGauge").innerHTML=
-    renderGauge(ingestion.health_score,composite);
-
-  /* Ops */
   document.getElementById("opsGrid").innerHTML=
-    metric("SLA",ingestion.sla_percent+"%")+
-    metric("Delay Risk",delayRisk+"%",delayRisk,"#ef4444")+
-    metric("Anomaly",Math.round(anomaly)+"%",anomaly,"#f59e0b")+
-    metric("Volatility",Math.round(volatility*100)+"%",volatility*100,"#8b5cf6")+
-    metric("Avg",avg+" ms")+
-    metric("P95",p95+" ms");
+    metric("SLA",ingestion.sla_percent+"%",null,null,"Service level agreement compliance.")+
+    metric("Delay Risk",delayRisk+"%",delayRisk,"#ef4444","Probability next cycle exceeds time threshold.")+
+    metric("Anomaly",Math.round(anomaly)+"%",anomaly,"#f59e0b","Statistical deviation from normal duration.")+
+    metric("Volatility",Math.round(volatility*100)+"%",volatility*100,"#8b5cf6","Duration spread vs baseline.")+
+    metric("Avg",avg+" ms",null,null,"Mean ingestion duration.")+
+    metric("P95",p95+" ms",null,null,"95th percentile duration.");
 
-  /* Radar */
   document.getElementById("riskRadar").innerHTML=
     renderRadar([delayRisk,anomaly,volatility*100,ingestion.health_score]);
 
-  /* Trend */
   document.getElementById("trendSparkline").innerHTML=
-    renderSparkline(stabilityHist);
-  
-  /* AI Narrative */
+    renderSparkline(hist);
+
   document.getElementById("aiNarrative").innerHTML=
     `<div class="small">
       Composite stability ${composite}. 
@@ -502,14 +380,11 @@ async function load(){
       Volatility regime ${volatility>0.6?"High":volatility>0.3?"Moderate":"Low"}.
     </div>`;
 
-  /* Autonomy */
   document.getElementById("autonomyPanel").innerHTML=
-    `<div class="grid">
-      ${metric("Composite",composite)}
-      ${metric("Z-Score",z.toFixed(2))}
-      ${metric("Drift",drift+"m")}
-      ${metric("Minutes Since",mins)}
-    </div>`;
+    metric("Composite",composite,null,null,"Weighted adaptive score.")+
+    metric("Z-Score",z.toFixed(2),null,null,"Standard deviation from mean duration.")+
+    metric("Drift",drift+"m",null,null,"Time drift from expected interval.")+
+    metric("Minutes Since",mins,null,null,"Time since last snapshot.");
 }
 
 load();
