@@ -63,6 +63,10 @@
       color: #22c55e;
     }
 
+    .negative {
+  color: #ef4444;
+    }
+
     tr.net-apy td.value {
       font-size: 16px;
       font-weight: 700;
@@ -168,11 +172,17 @@
   const percent = Number(num) * 100;
 
   if (Math.abs(percent) < 0.00005) {
-    return "≈ 0.0000%";
+    return { text: "≈ 0.0000%", className: "" };
   }
 
   const sign = percent > 0 ? "+" : "";
-  return sign + percent.toFixed(4) + "%";
+  const formatted = sign + percent.toFixed(4) + "%";
+
+  if (percent > 0) {
+    return { text: formatted, className: "positive" };
+  } else {
+    return { text: formatted, className: "negative" };
+  }
     }
     
     function chainName(id) {
@@ -248,16 +258,24 @@ if (histJson.success && histJson.data.length >= 2) {
       ];
 
       for (const [label, value] of rows) {
-        const tr = document.createElement("tr");
-        if (label === "Net APY") tr.classList.add("net-apy");
+  const tr = document.createElement("tr");
 
-        tr.innerHTML = `
-          <td class="label">${label}</td>
-          <td class="value ${
-            label.includes("Yield") || label.includes("APY") ? "positive" : ""
-          }">${value}</td>
-        `;
-        body.appendChild(tr);
+  let displayValue = value;
+  let extraClass = "";
+
+  if (typeof value === "object" && value.text) {
+    displayValue = value.text;
+    extraClass = value.className;
+  }
+
+  tr.innerHTML = `
+    <td class="label">${label}</td>
+    <td class="value ${extraClass}">
+      ${displayValue}
+    </td>
+  `;
+
+  body.appendChild(tr);
       }
 
       document.getElementById("loading").style.display = "none";
