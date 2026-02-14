@@ -324,9 +324,22 @@ if (range === "all") bucket = "week";
 // Frontend 4H aggregation
 if (range === "4h") {
   const aggregated = [];
+
   for (let i = 0; i < ordered.length; i += 4) {
-    aggregated.push(ordered[i]);
+    const slice = ordered.slice(i, i + 4);
+
+    if (slice.length === 0) continue;
+
+    const avgUY = slice.reduce((sum, c) => sum + Number(c.underlying_yield), 0) / slice.length;
+    const avgIY = slice.reduce((sum, c) => sum + Number(c.implied_yield), 0) / slice.length;
+
+    aggregated.push({
+      bucket_time: slice[0].bucket_time,
+      underlying_yield: avgUY,
+      implied_yield: avgIY
+    });
   }
+
   ordered = aggregated;
 }
       
@@ -367,6 +380,19 @@ if (ordered.length > 300 && bucket === "hour") {
     dIY.push(deltaIY);
     dSpread.push(deltaSpread);
   }
+
+      // Light smoothing only for 1H
+if (range === "1h") {
+  const smooth = (arr) =>
+    arr.map((v, i, a) => {
+      if (i === 0 || i === a.length - 1) return v;
+      return (a[i - 1] + v + a[i + 1]) / 3;
+    });
+
+  dUY.splice(0, dUY.length, ...smooth(dUY));
+  dIY.splice(0, dIY.length, ...smooth(dIY));
+  dSpread.splice(0, dSpread.length, ...smooth(dSpread));
+}
 
   if (chart) chart.destroy();
 
@@ -439,7 +465,7 @@ if (ordered.length > 300 && bucket === "hour") {
   grid: {
     color: (context) => {
       if (context.tick.value === 0) {
-        return "#ffffff55"; // highlighted zero line
+        return "#ffffffaa"; // highlighted zero line
       }
       return "#1f2937";
     }
