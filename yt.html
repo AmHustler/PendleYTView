@@ -343,17 +343,6 @@ if (range === "4h") {
 
   ordered = aggregated;
 }
-      
-      // Auto-switch bucket if too many data points
-if (ordered.length > 200 && bucket === "hour") {
-  bucket = "4hour";
-  return loadChart(range); // recall function with larger bucket
-}
-
-if (ordered.length > 300 && bucket === "hour") {
-  bucket = "day";
-  return loadChart(range);
-}
 
   const labels = [];
   const dUY = [];
@@ -381,9 +370,7 @@ if (ordered.length > 300 && bucket === "hour") {
     dIY.push(deltaIY);
     dSpread.push(deltaSpread);
   }
-      if (range === "all") {
-  // do not aggregate
-      }
+      
 
       // Light smoothing only for 1H
 if (range === "1h") {
@@ -432,65 +419,58 @@ if (range === "1h") {
       ],
     },
     options: {
-      responsive: true,
-      interaction: {
-        mode: "index",
-        intersect: false,
-      },
-      plugins: {
-  legend: {
-    labels: { color: "#9ca3af" }
-  },
-  tooltip: {
+  responsive: true,
+  interaction: {
     mode: "index",
     intersect: false,
-    callbacks: {
-      label: function (context) {
-        return context.dataset.label + ": " + context.raw.toFixed(4) + "%";
-      }
-    }
   },
-  zoom: {
-    pan: {
-      enabled: true,
-      mode: "x"
+  plugins: {
+    legend: {
+      labels: { color: "#9ca3af" }
+    },
+    tooltip: {
+      mode: "index",
+      intersect: false,
+      callbacks: {
+        label: function (context) {
+          return context.dataset.label + ": " + context.raw.toFixed(4) + "%";
+        }
+      }
     },
     zoom: {
-      wheel: {
-        enabled: true
+      pan: {
+        enabled: true,
+        mode: "x"
       },
-      pinch: {
-        enabled: true
-      },
-      mode: "x"
-    }
-  }
+      zoom: {
+        wheel: { enabled: true },
+        pinch: { enabled: true },
+        mode: "x"
       }
-      scales: {
-        x: {
-          type: "time",
-          time: {
-            tooltipFormat: "MMM dd HH:mm",
-          },
-          ticks: {
-            color: "#6b7280",
-          },
-        },
-        y: {
-  ticks: {
-    callback: (value) => value.toFixed(3) + "%",
-    color: "#6b7280",
+    }
   },
-  grid: {
-    color: (context) => {
-      if (context.tick.value === 0) {
-        return "#ffffffaa"; // highlighted zero line
+  scales: {
+    x: {
+      type: "time",
+      time: {
+        tooltipFormat: "MMM dd HH:mm",
+      },
+      ticks: { color: "#6b7280" }
+    },
+    y: {
+      ticks: {
+        callback: (value) => value.toFixed(3) + "%",
+        color: "#6b7280"
+      },
+      grid: {
+        color: (context) =>
+          context.tick.value === 0
+            ? "#ffffffaa"
+            : "#1f2937"
       }
-      return "#1f2937";
     }
   }
-},
-      },
+    }
     },
   });
           }
