@@ -291,7 +291,7 @@ if (histJson.success && histJson.data.length >= 2) {
   bucket = "hour";
 
   if (range === "1d") bucket = "hour";
-if (range === "1w") bucket = "4hour";
+if (range === "1w") bucket = "hour";
 if (range === "1m") bucket = "day";
 if (range === "all") bucket = "week";
 
@@ -326,7 +326,7 @@ if (ordered.length > 200 && bucket === "hour") {
   return loadChart(range); // recall function with larger bucket
 }
 
-if (ordered.length > 200 && bucket === "4hour") {
+if (ordered.length > 300 && bucket === "hour") {
   bucket = "day";
   return loadChart(range);
 }
