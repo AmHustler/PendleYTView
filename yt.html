@@ -112,7 +112,7 @@ td.value.negative {
     }
   </style>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 
 <body>
@@ -286,68 +286,138 @@ if (histJson.success && histJson.data.length >= 2) {
     let chart;
 
     async function loadChart(range) {
-      let bucket = "hour";
-      if (range === "1m") bucket = "day";
-      if (range === "all") bucket = "week";
+  let bucket = "hour";
 
-      const url =
-        `https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed`;
+  if (range === "1w") bucket = "hour";
+  if (range === "1m") bucket = "day";
+  if (range === "all") bucket = "week";
 
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          yt_address: ytAddress,
-          chain_id: chainId,
-          timeframe: bucket,
-        }),
-      });
+  const res = await fetch(
+    "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        yt_address: ytAddress,
+        chain_id: chainId,
+        timeframe: bucket,
+      }),
+    }
+  );
 
-      const json = await res.json();
+  const json = await res.json();
 
-      if (!json.success || json.data.length < 2) {
-        document.getElementById("netYieldChart").style.display = "none";
-        document.getElementById("chartEmpty").style.display = "block";
-        return;
-      }
+  if (!json.success || json.data.length < 3) {
+    document.getElementById("netYieldChart").style.display = "none";
+    document.getElementById("chartEmpty").style.display = "block";
+    return;
+  }
 
-      document.getElementById("chartEmpty").style.display = "none";
-      document.getElementById("netYieldChart").style.display = "block";
+  document.getElementById("chartEmpty").style.display = "none";
+  document.getElementById("netYieldChart").style.display = "block";
 
-      // Chart.js expects oldest → newest
-const ordered = [...json.data].reverse();
+  const ordered = [...json.data].reverse();
 
-const labels = ordered.map(d =>
-  new Date(d.bucket_time).toLocaleDateString()
-);
+  const labels = [];
+  const dUY = [];
+  const dIY = [];
+  const dSpread = [];
 
-const values = ordered.map(d =>
-  (Number(d.net_yield) * 100).toFixed(4)
-);
+  for (let i = 1; i < ordered.length; i++) {
+    const current = ordered[i];
+    const prev = ordered[i - 1];
 
-      if (chart) chart.destroy();
+    const uy = Number(current.underlying_yield);
+    const iy = Number(current.implied_yield);
+    const prevUy = Number(prev.underlying_yield);
+    const prevIy = Number(prev.implied_yield);
 
-      chart = new Chart(document.getElementById("netYieldChart"), {
-        type: "line",
-        data: {
-          labels,
-          datasets: [{
-            data: values,
-            borderColor: "#22c55e",
-            backgroundColor: "rgba(34,197,94,0.1)",
-            tension: 0.3,
-            fill: true,
-          }],
+    const deltaUY = (uy - prevUy) * 100;
+    const deltaIY = (iy - prevIy) * 100;
+
+    const spread = uy - iy;
+    const prevSpread = prevUy - prevIy;
+    const deltaSpread = (spread - prevSpread) * 100;
+
+    labels.push(new Date(current.bucket_time));
+    dUY.push(deltaUY);
+    dIY.push(deltaIY);
+    dSpread.push(deltaSpread);
+  }
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("netYieldChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Δ Underlying Yield",
+          data: dUY,
+          borderColor: "#22c55e",
+          backgroundColor: "rgba(34,197,94,0.1)",
+          tension: 0.2,
+          pointRadius: 0,
         },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { ticks: { callback: v => v + "%" } },
+        {
+          label: "Δ Implied Yield",
+          data: dIY,
+          borderColor: "#f59e0b",
+          backgroundColor: "rgba(245,158,11,0.1)",
+          tension: 0.2,
+          pointRadius: 0,
+        },
+        {
+          label: "Δ Spread",
+          data: dSpread,
+          borderColor: "#8b5cf6",
+          backgroundColor: "rgba(139,92,246,0.1)",
+          tension: 0.2,
+          pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: {
+        mode: "index",
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: "#9ca3af",
           },
         },
-      });
-    }
+        tooltip: {
+          callbacks: {
+            label: function (context) {
+              return context.dataset.label + ": " + context.raw.toFixed(4) + "%";
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: "time",
+          time: {
+            tooltipFormat: "MMM dd HH:mm",
+          },
+          ticks: {
+            color: "#6b7280",
+          },
+        },
+        y: {
+          ticks: {
+            callback: (value) => value.toFixed(3) + "%",
+            color: "#6b7280",
+          },
+        },
+      },
+    },
+  });
+          }
 
     document.querySelectorAll(".chart-tabs button").forEach(btn => {
       btn.onclick = () => {
