@@ -114,6 +114,7 @@ td.value.negative {
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
 
 <body>
@@ -380,6 +381,9 @@ if (ordered.length > 300 && bucket === "hour") {
     dIY.push(deltaIY);
     dSpread.push(deltaSpread);
   }
+      if (range === "all") {
+  // do not aggregate
+      }
 
       // Light smoothing only for 1H
 if (range === "1h") {
@@ -434,19 +438,34 @@ if (range === "1h") {
         intersect: false,
       },
       plugins: {
-        legend: {
-          labels: {
-            color: "#9ca3af",
-          },
-        },
-        tooltip: {
-          callbacks: {
-            label: function (context) {
-              return context.dataset.label + ": " + context.raw.toFixed(4) + "%";
-            },
-          },
-        },
+  legend: {
+    labels: { color: "#9ca3af" }
+  },
+  tooltip: {
+    mode: "index",
+    intersect: false,
+    callbacks: {
+      label: function (context) {
+        return context.dataset.label + ": " + context.raw.toFixed(4) + "%";
+      }
+    }
+  },
+  zoom: {
+    pan: {
+      enabled: true,
+      mode: "x"
+    },
+    zoom: {
+      wheel: {
+        enabled: true
       },
+      pinch: {
+        enabled: true
+      },
+      mode: "x"
+    }
+  }
+      }
       scales: {
         x: {
           type: "time",
