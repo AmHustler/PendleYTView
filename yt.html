@@ -112,7 +112,8 @@ td.value.negative {
     }
   </style>
 
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 
 <body>
@@ -146,6 +147,7 @@ td.value.negative {
   </div>
 
   <script>
+    let bucket = "hour";
     const params = new URLSearchParams(window.location.search);
     const chainId = params.get("chain_id");
     const ytAddress = params.get("yt_address");
@@ -286,11 +288,12 @@ if (histJson.success && histJson.data.length >= 2) {
     let chart;
 
     async function loadChart(range) {
-  let bucket = "hour";
+  bucket = "hour";
 
-  if (range === "1w") bucket = "hour";
-  if (range === "1m") bucket = "day";
-  if (range === "all") bucket = "week";
+  if (range === "1d") bucket = "hour";
+if (range === "1w") bucket = "4hour";
+if (range === "1m") bucket = "day";
+if (range === "all") bucket = "week";
 
   const res = await fetch(
     "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed",
@@ -317,6 +320,16 @@ if (histJson.success && histJson.data.length >= 2) {
   document.getElementById("netYieldChart").style.display = "block";
 
   const ordered = [...json.data].reverse();
+      // Auto-switch bucket if too many data points
+if (ordered.length > 200 && bucket === "hour") {
+  bucket = "4hour";
+  return loadChart(range); // recall function with larger bucket
+}
+
+if (ordered.length > 200 && bucket === "4hour") {
+  bucket = "day";
+  return loadChart(range);
+}
 
   const labels = [];
   const dUY = [];
