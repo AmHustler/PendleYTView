@@ -133,10 +133,10 @@ td.value.negative {
       <div class="chart-title">Net Yield History</div>
 
       <div class="chart-tabs">
-        <button data-range="1d" class="active">1D</button>
-        <button data-range="1w">1W</button>
-        <button data-range="1m">1M</button>
-        <button data-range="all">ALL</button>
+  <button data-range="1h" class="active">1H</button>
+  <button data-range="4h">4H</button>
+  <button data-range="1d">1D</button>
+  <button data-range="all">ALL</button>
       </div>
 
       <canvas id="netYieldChart"></canvas>
@@ -290,9 +290,9 @@ if (histJson.success && histJson.data.length >= 2) {
     async function loadChart(range) {
   bucket = "hour";
 
-  if (range === "1d") bucket = "hour";
-if (range === "1w") bucket = "hour";
-if (range === "1m") bucket = "day";
+  if (range === "1h") bucket = "hour";
+if (range === "4h") bucket = "hour"; // still fetch hourly
+if (range === "1d") bucket = "day";
 if (range === "all") bucket = "week";
 
   const res = await fetch(
@@ -319,7 +319,17 @@ if (range === "all") bucket = "week";
   document.getElementById("chartEmpty").style.display = "none";
   document.getElementById("netYieldChart").style.display = "block";
 
-  const ordered = [...json.data].reverse();
+  let ordered = [...json.data].reverse();
+
+// Frontend 4H aggregation
+if (range === "4h") {
+  const aggregated = [];
+  for (let i = 0; i < ordered.length; i += 4) {
+    aggregated.push(ordered[i]);
+  }
+  ordered = aggregated;
+}
+      
       // Auto-switch bucket if too many data points
 if (ordered.length > 200 && bucket === "hour") {
   bucket = "4hour";
@@ -422,11 +432,19 @@ if (ordered.length > 300 && bucket === "hour") {
           },
         },
         y: {
-          ticks: {
-            callback: (value) => value.toFixed(3) + "%",
-            color: "#6b7280",
-          },
-        },
+  ticks: {
+    callback: (value) => value.toFixed(3) + "%",
+    color: "#6b7280",
+  },
+  grid: {
+    color: (context) => {
+      if (context.tick.value === 0) {
+        return "#ffffff55"; // highlighted zero line
+      }
+      return "#1f2937";
+    }
+  }
+},
       },
     },
   });
@@ -441,7 +459,7 @@ if (ordered.length > 300 && bucket === "hour") {
       };
     });
 
-    loadChart("1w");
+    loadChart("1h");
   </script>
 </body>
 </html>
