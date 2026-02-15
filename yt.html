@@ -310,7 +310,7 @@ if (histJson.success && histJson.data.length >= 2) {
 
   const json = await res.json();
 
-  if (!json.success || json.data.length < 3) {
+  if (!json.success || json.data.length < 2) {
     document.getElementById("netYieldChart").innerHTML = "";
     document.getElementById("chartEmpty").style.display = "block";
     return;
@@ -416,6 +416,12 @@ handleScale: {
   uySeries.setData(uyData);
   iySeries.setData(iyData);
   spreadSeries.setData(spreadData);
+
+      if (uyData.length === 0) {
+  document.getElementById("netYieldChart").innerHTML = "";
+  document.getElementById("chartEmpty").style.display = "block";
+  return;
+      }
 
       if (uyData.length > 1) {
   chart.timeScale().fitContent();
