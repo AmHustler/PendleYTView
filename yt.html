@@ -387,7 +387,12 @@ handleScale: {
 },
     }
   );
-
+chart.applyOptions({
+  timeScale: {
+    timeVisible: true,
+    secondsVisible: false,
+  },
+});
   const uySeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 2 });
   const iySeries = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2 });
   const spreadSeries = chart.addLineSeries({ color: "#8b5cf6", lineWidth: 2 });
@@ -430,12 +435,7 @@ handleScale: {
 
   chart.timeScale().fitContent();
     }
-chart.applyOptions({
-  timeScale: {
-    timeVisible: true,
-    secondsVisible: false,
-  },
-});
+
     document.querySelectorAll(".chart-tabs button").forEach(btn => {
       btn.onclick = () => {
         document.querySelectorAll(".chart-tabs button")
