@@ -218,7 +218,7 @@ const histRes = await fetch(
       yt_address: ytAddress,
       chain_id: chainId,
       timeframe: "hour",
-      limit: 2
+      limit: 500
     }),
   }
 );
@@ -309,6 +309,8 @@ if (histJson.success && histJson.data.length >= 2) {
   );
 
   const json = await res.json();
+      document.getElementById("loading").innerText =
+  "History count: " + (json.data ? json.data.length : "NO DATA");
 
   if (!json.success || json.data.length < 2) {
     document.getElementById("netYieldChart").innerHTML = "";
