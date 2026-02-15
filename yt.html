@@ -417,7 +417,7 @@ chart.applyOptions({
     const deltaIY = (iy - prevIy) * 100;
     const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 100;
 
-    const time = Math.floor(new Date(current.bucket_time).getTime() / 1000);
+    const time = current.bucket_time;
 
     uyData.push({ time, value: deltaUY });
     iyData.push({ time, value: deltaIY });
