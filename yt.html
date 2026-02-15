@@ -415,8 +415,15 @@ handleScale: {
   iySeries.setData(iyData);
   spreadSeries.setData(spreadData);
 
-  chart.timeScale().fitContent();
-  chart.timeScale().scrollToRealTime();
+  chart.timeScale().setVisibleRange({
+  from: uyData[0].time,
+  to: uyData[uyData.length - 1].time,
+});
+
+chart.timeScale().applyOptions({
+  rightBarStaysOnScroll: true,
+  rightBarStaysOnScale: true,
+});
     }
 
     document.querySelectorAll(".chart-tabs button").forEach(btn => {
