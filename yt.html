@@ -370,8 +370,6 @@ if (histJson.success && histJson.data.length >= 2) {
   borderColor: "#1f2937",
   timeVisible: true,
   secondsVisible: false,
-  rightOffset: 10,
-  barSpacing: 8,
   timeVisible: true,
 },
       handleScroll: {
@@ -432,7 +430,13 @@ chart.applyOptions({
       zeroSeries.setData(
   uyData.map(d => ({ time: d.time, value: 0 }))
 );
-
+chart.priceScale("right").applyOptions({
+  autoScale: true,
+  scaleMargins: {
+    top: 0.2,
+    bottom: 0.2,
+  },
+});
   chart.timeScale().fitContent();
     }
 
