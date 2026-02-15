@@ -372,6 +372,7 @@ if (histJson.success && histJson.data.length >= 2) {
   secondsVisible: false,
   rightOffset: 10,
   barSpacing: 8,
+  timeVisible: true,
 },
       handleScroll: {
   mouseWheel: true,
@@ -413,13 +414,12 @@ handleScale: {
     const deltaIY = (iy - prevIy) * 100;
     const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 100;
 
-    const time = new Date(current.bucket_time).toISOString();
+    const time = Math.floor(new Date(current.bucket_time).getTime() / 1000);
 
     uyData.push({ time, value: deltaUY });
     iyData.push({ time, value: deltaIY });
     spreadData.push({ time, value: deltaSpread });
   }
-      alert("First value: " + uyData[0].value);
 
   uySeries.setData(uyData);
   iySeries.setData(iyData);
@@ -430,7 +430,12 @@ handleScale: {
 
   chart.timeScale().fitContent();
     }
-
+chart.applyOptions({
+  timeScale: {
+    timeVisible: true,
+    secondsVisible: false,
+  },
+});
     document.querySelectorAll(".chart-tabs button").forEach(btn => {
       btn.onclick = () => {
         document.querySelectorAll(".chart-tabs button")
