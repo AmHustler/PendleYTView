@@ -408,7 +408,7 @@ handleScale: {
     const deltaIY = (iy - prevIy) * 100;
     const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 100;
 
-    const time = Math.floor(new Date(current.bucket_time).getTime() / 1000);
+    const time = current.bucket_time;
 
     uyData.push({ time, value: deltaUY });
     iyData.push({ time, value: deltaIY });
@@ -419,19 +419,7 @@ handleScale: {
   iySeries.setData(iyData);
   spreadSeries.setData(spreadData);
 
-      if (uyData.length === 0) {
-  document.getElementById("netYieldChart").innerHTML = "";
-  document.getElementById("chartEmpty").style.display = "block";
-  return;
-      }
-
-      if (uyData.length > 1) {
   chart.timeScale().fitContent();
-
-  chart.timeScale().applyOptions({
-    rightBarStaysOnScroll: true,
-    rightBarStaysOnScale: true,
-  });
       }
     }
 
