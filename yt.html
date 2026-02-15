@@ -112,9 +112,7 @@ td.value.negative {
     }
   </style>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 
 <body>
@@ -140,7 +138,7 @@ td.value.negative {
   <button data-range="all">ALL</button>
       </div>
 
-      <canvas id="netYieldChart"></canvas>
+      <div id="netYieldChart" style="height:400px;"></div>
       <div id="chartEmpty" class="loading" style="display:none;">
         Historical data will appear here once enough snapshots are collected.
       </div>
@@ -289,12 +287,13 @@ if (histJson.success && histJson.data.length >= 2) {
     let chart;
 
     async function loadChart(range) {
-  bucket = "hour";
 
-  if (range === "1h") bucket = "hour";
-if (range === "4h") bucket = "hour"; // still fetch hourly
-if (range === "1d") bucket = "day";
-if (range === "all") bucket = "week";
+  let timeframe = "hour";
+
+  if (range === "1h") timeframe = "hour";
+  if (range === "4h") timeframe = "hour"; // frontend aggregation
+  if (range === "1d") timeframe = "day";
+  if (range === "all") timeframe = "week";
 
   const res = await fetch(
     "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed",
@@ -304,7 +303,7 @@ if (range === "all") bucket = "week";
       body: JSON.stringify({
         yt_address: ytAddress,
         chain_id: chainId,
-        timeframe: bucket,
+        timeframe: timeframe,
       }),
     }
   );
@@ -312,42 +311,71 @@ if (range === "all") bucket = "week";
   const json = await res.json();
 
   if (!json.success || json.data.length < 3) {
-    document.getElementById("netYieldChart").style.display = "none";
+    document.getElementById("netYieldChart").innerHTML = "";
     document.getElementById("chartEmpty").style.display = "block";
     return;
   }
 
   document.getElementById("chartEmpty").style.display = "none";
-  document.getElementById("netYieldChart").style.display = "block";
 
   let ordered = [...json.data].reverse();
 
-// Frontend 4H aggregation
-if (range === "4h") {
-  const aggregated = [];
+  // 4H aggregation (frontend)
+  if (range === "4h") {
+    const aggregated = [];
 
-  for (let i = 0; i < ordered.length; i += 4) {
-    const slice = ordered.slice(i, i + 4);
+    for (let i = 0; i < ordered.length; i += 4) {
+      const slice = ordered.slice(i, i + 4);
+      if (slice.length === 0) continue;
 
-    if (slice.length === 0) continue;
+      const avgUY = slice.reduce((sum, c) => sum + Number(c.underlying_yield), 0) / slice.length;
+      const avgIY = slice.reduce((sum, c) => sum + Number(c.implied_yield), 0) / slice.length;
 
-    const avgUY = slice.reduce((sum, c) => sum + Number(c.underlying_yield), 0) / slice.length;
-    const avgIY = slice.reduce((sum, c) => sum + Number(c.implied_yield), 0) / slice.length;
+      aggregated.push({
+        bucket_time: slice[0].bucket_time,
+        underlying_yield: avgUY,
+        implied_yield: avgIY
+      });
+    }
 
-    aggregated.push({
-      bucket_time: slice[0].bucket_time,
-      underlying_yield: avgUY,
-      implied_yield: avgIY
-    });
+    ordered = aggregated;
   }
 
-  ordered = aggregated;
-}
+  // Clear previous chart
+  document.getElementById("netYieldChart").innerHTML = "";
 
-  const labels = [];
-  const dUY = [];
-  const dIY = [];
-  const dSpread = [];
+  const chart = LightweightCharts.createChart(
+    document.getElementById("netYieldChart"),
+    {
+      layout: {
+        background: { color: "#0b0e14" },
+        textColor: "#9ca3af",
+      },
+      grid: {
+        vertLines: { color: "#1f2937" },
+        horzLines: { color: "#1f2937" },
+      },
+      crosshair: {
+        mode: LightweightCharts.CrosshairMode.Normal,
+      },
+      rightPriceScale: {
+        borderColor: "#1f2937",
+      },
+      timeScale: {
+        borderColor: "#1f2937",
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    }
+  );
+
+  const uySeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 2 });
+  const iySeries = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2 });
+  const spreadSeries = chart.addLineSeries({ color: "#8b5cf6", lineWidth: 2 });
+
+  const uyData = [];
+  const iyData = [];
+  const spreadData = [];
 
   for (let i = 1; i < ordered.length; i++) {
     const current = ordered[i];
@@ -360,119 +388,21 @@ if (range === "4h") {
 
     const deltaUY = (uy - prevUy) * 100;
     const deltaIY = (iy - prevIy) * 100;
+    const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 100;
 
-    const spread = uy - iy;
-    const prevSpread = prevUy - prevIy;
-    const deltaSpread = (spread - prevSpread) * 100;
+    const time = Math.floor(new Date(current.bucket_time).getTime() / 1000);
 
-    labels.push(new Date(current.bucket_time));
-    dUY.push(deltaUY);
-    dIY.push(deltaIY);
-    dSpread.push(deltaSpread);
+    uyData.push({ time, value: deltaUY });
+    iyData.push({ time, value: deltaIY });
+    spreadData.push({ time, value: deltaSpread });
   }
-      
 
-      // Light smoothing only for 1H
-if (range === "1h") {
-  const smooth = (arr) =>
-    arr.map((v, i, a) => {
-      if (i === 0 || i === a.length - 1) return v;
-      return (a[i - 1] + v + a[i + 1]) / 3;
-    });
+  uySeries.setData(uyData);
+  iySeries.setData(iyData);
+  spreadSeries.setData(spreadData);
 
-  dUY.splice(0, dUY.length, ...smooth(dUY));
-  dIY.splice(0, dIY.length, ...smooth(dIY));
-  dSpread.splice(0, dSpread.length, ...smooth(dSpread));
-}
-
-  if (chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("netYieldChart"), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Δ Underlying Yield",
-          data: dUY,
-          borderColor: "#22c55e",
-          backgroundColor: "rgba(34,197,94,0.1)",
-          tension: 0.2,
-          pointRadius: 0,
-        },
-        {
-          label: "Δ Implied Yield",
-          data: dIY,
-          borderColor: "#f59e0b",
-          backgroundColor: "rgba(245,158,11,0.1)",
-          tension: 0.2,
-          pointRadius: 0,
-        },
-        {
-          label: "Δ Spread",
-          data: dSpread,
-          borderColor: "#8b5cf6",
-          backgroundColor: "rgba(139,92,246,0.1)",
-          tension: 0.2,
-          pointRadius: 0,
-        },
-      ],
-    },
-    options: {
-  responsive: true,
-  interaction: {
-    mode: "index",
-    intersect: false,
-  },
-  plugins: {
-    legend: {
-      labels: { color: "#9ca3af" }
-    },
-    tooltip: {
-      mode: "index",
-      intersect: false,
-      callbacks: {
-        label: function (context) {
-          return context.dataset.label + ": " + context.raw.toFixed(4) + "%";
-        }
-      }
-    },
-    zoom: {
-      pan: {
-        enabled: true,
-        mode: "x"
-      },
-      zoom: {
-        wheel: { enabled: true },
-        pinch: { enabled: true },
-        mode: "x"
-      }
+  chart.timeScale().fitContent();
     }
-  },
-  scales: {
-    x: {
-      type: "time",
-      time: {
-        tooltipFormat: "MMM dd HH:mm",
-      },
-      ticks: { color: "#6b7280" }
-    },
-    y: {
-      ticks: {
-        callback: (value) => value.toFixed(3) + "%",
-        color: "#6b7280"
-      },
-      grid: {
-        color: (context) =>
-          context.tick.value === 0
-            ? "#ffffffaa"
-            : "#1f2937"
-      }
-    }
-  }
-    },
-  });
-          }
 
     document.querySelectorAll(".chart-tabs button").forEach(btn => {
       btn.onclick = () => {
