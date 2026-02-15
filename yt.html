@@ -388,24 +388,20 @@ handleScale: {
 },
     }
   );
-chart.applyOptions({
-  timeScale: {
-    timeVisible: true,
-    secondsVisible: false,
-  },
-});
-      setTimeout(() => {
-  chart.resize(
-    container.clientWidth,
-    container.clientHeight
-  );
-}, 100);
+
       const container = document.getElementById("netYieldChart");
 
 chart.resize(
   container.clientWidth,
   container.clientHeight
 );
+
+setTimeout(() => {
+  chart.resize(
+    container.clientWidth,
+    container.clientHeight
+  );
+}, 100);
   const uySeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 2 });
   const iySeries = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2 });
   const spreadSeries = chart.addLineSeries({ color: "#8b5cf6", lineWidth: 2 });
@@ -432,7 +428,9 @@ chart.resize(
     const deltaIY = (iy - prevIy) * 100;
     const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 100;
 
-    const time = new Date(current.bucket_time).getTime();
+    const time = Math.floor(
+  new Date(current.bucket_time).getTime() / 1000
+);
 
     uyData.push({ time, value: deltaUY });
     iyData.push({ time, value: deltaIY });
