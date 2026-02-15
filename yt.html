@@ -365,10 +365,12 @@ if (histJson.success && histJson.data.length >= 2) {
         borderColor: "#1f2937",
       },
       timeScale: {
-        borderColor: "#1f2937",
-        timeVisible: true,
-        secondsVisible: false,
-      },
+  borderColor: "#1f2937",
+  timeVisible: true,
+  secondsVisible: false,
+  rightOffset: 10,
+  barSpacing: 8,
+},
       handleScroll: {
   mouseWheel: true,
   pressedMouseMove: true,
@@ -414,6 +416,17 @@ handleScale: {
   uySeries.setData(uyData);
   iySeries.setData(iyData);
   spreadSeries.setData(spreadData);
+
+      if (uyData.length > 0) {
+  chart.timeScale().setVisibleRange({
+    from: uyData[0].time,
+    to: uyData[uyData.length - 1].time,
+  });
+
+  chart.timeScale().applyOptions({
+    rightBarStaysOnScroll: true,
+  });
+      }
 
   chart.timeScale().setVisibleRange({
   from: uyData[0].time,
