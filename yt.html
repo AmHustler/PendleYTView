@@ -110,6 +110,10 @@ td.value.negative {
       border-color: #22c55e;
       background: #020617;
     }
+    #netYieldChart {
+  width: 100%;
+  height: 400px;
+    }
   </style>
 
   <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
@@ -138,7 +142,7 @@ td.value.negative {
   <button data-range="all">ALL</button>
       </div>
 
-      <div id="netYieldChart" style="height:400px; width:100%;"></div>
+      <div id="netYieldChart"></div>
       <div id="chartEmpty" class="loading" style="display:none;">
         Historical data will appear here once enough snapshots are collected.
       </div>
@@ -390,6 +394,18 @@ chart.applyOptions({
     secondsVisible: false,
   },
 });
+      setTimeout(() => {
+  chart.resize(
+    container.clientWidth,
+    container.clientHeight
+  );
+}, 100);
+      const container = document.getElementById("netYieldChart");
+
+chart.resize(
+  container.clientWidth,
+  container.clientHeight
+);
   const uySeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 2 });
   const iySeries = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2 });
   const spreadSeries = chart.addLineSeries({ color: "#8b5cf6", lineWidth: 2 });
