@@ -390,6 +390,11 @@ handleScale: {
   const uySeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 2 });
   const iySeries = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2 });
   const spreadSeries = chart.addLineSeries({ color: "#8b5cf6", lineWidth: 2 });
+      const zeroSeries = chart.addLineSeries({
+  color: "#374151",
+  lineWidth: 1,
+  lineStyle: LightweightCharts.LineStyle.Dotted,
+});
 
   const uyData = [];
   const iyData = [];
@@ -408,16 +413,27 @@ handleScale: {
     const deltaIY = (iy - prevIy) * 100;
     const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 100;
 
-    const time = current.bucket_time;
+    const time = Math.floor(new Date(current.bucket_time).getTime() / 1000);
 
     uyData.push({ time, value: deltaUY });
     iyData.push({ time, value: deltaIY });
     spreadData.push({ time, value: deltaSpread });
   }
+      alert("First value: " + uyData[0].value);
 
   uySeries.setData(uyData);
   iySeries.setData(iyData);
   spreadSeries.setData(spreadData);
+      zeroSeries.setData(
+  uyData.map(d => ({ time: d.time, value: 0 }))
+);
+      chart.priceScale("right").applyOptions({
+  autoScale: true,
+  scaleMargins: {
+    top: 0.2,
+    bottom: 0.2,
+  },
+});
 
   chart.timeScale().fitContent();
     }
