@@ -138,7 +138,7 @@ td.value.negative {
   <button data-range="all">ALL</button>
       </div>
 
-      <div id="netYieldChart" style="height:400px;"></div>
+      <div id="netYieldChart" style="height:400px; width:100%;"></div>
       <div id="chartEmpty" class="loading" style="display:none;">
         Historical data will appear here once enough snapshots are collected.
       </div>
@@ -342,9 +342,12 @@ if (histJson.success && histJson.data.length >= 2) {
   }
 
   // Clear previous chart
+      if (chart) {
+  chart.remove();
+      }
   document.getElementById("netYieldChart").innerHTML = "";
 
-  const chart = LightweightCharts.createChart(
+   chart = LightweightCharts.createChart(
     document.getElementById("netYieldChart"),
     {
       layout: {
@@ -366,6 +369,17 @@ if (histJson.success && histJson.data.length >= 2) {
         timeVisible: true,
         secondsVisible: false,
       },
+      handleScroll: {
+  mouseWheel: true,
+  pressedMouseMove: true,
+  horzTouchDrag: true,
+  vertTouchDrag: false,
+},
+handleScale: {
+  axisPressedMouseMove: true,
+  mouseWheel: true,
+  pinch: true,
+},
     }
   );
 
@@ -402,6 +416,7 @@ if (histJson.success && histJson.data.length >= 2) {
   spreadSeries.setData(spreadData);
 
   chart.timeScale().fitContent();
+  chart.timeScale().scrollToRealTime();
     }
 
     document.querySelectorAll(".chart-tabs button").forEach(btn => {
