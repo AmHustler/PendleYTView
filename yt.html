@@ -235,6 +235,9 @@ if (histJson.success && histJson.data.length >= 2) {
   const latest = histJson.data[0];
   const prev   = histJson.data[1];
 
+  console.log("Latest:", latest);
+console.log("Previous:", prev);
+
   dUY = Number(latest.underlying_yield) - Number(prev.underlying_yield);
   dIY = Number(latest.implied_yield)    - Number(prev.implied_yield);
 
@@ -377,20 +380,53 @@ chart = LightweightCharts.createChart(container, {
     timeVisible: true,
     secondsVisible: false,
   },
+  handleScroll: {
+  horzTouchDrag: true,
+  vertTouchDrag: false,
+},
+handleScale: {
+  pinch: true,
+},
 });
       window.addEventListener("resize", () => {
   chart.resize(container.clientWidth, 400);
 });
+      const tooltip = document.createElement("div");
+tooltip.style.position = "absolute";
+tooltip.style.display = "none";
+tooltip.style.background = "#111827";
+tooltip.style.border = "1px solid #1f2937";
+tooltip.style.padding = "8px";
+tooltip.style.fontSize = "12px";
+tooltip.style.borderRadius = "6px";
+tooltip.style.pointerEvents = "none";
+tooltip.style.color = "#e6e6e6";
 
-const testSeries = chart.addLineSeries({ color: "red" });
+container.appendChild(tooltip);
 
-testSeries.setData([
-  { time: 1700000000, value: 1 },
-  { time: 1700003600, value: 3 },
-  { time: 1700007200, value: 2 },
-]);
+      chart.subscribeCrosshairMove(param => {
+  if (!param.time || !param.seriesPrices.size) {
+    tooltip.style.display = "none";
+    return;
+  }
 
-chart.timeScale().fitContent();
+  const uy = param.seriesPrices.get(uySeries);
+  const iy = param.seriesPrices.get(iySeries);
+  const spread = param.seriesPrices.get(spreadSeries);
+
+  const date = new Date(param.time * 1000);
+
+  tooltip.innerHTML = `
+    <div>${date.toUTCString()}</div>
+    <div>Δ UY: ${uy?.toFixed(2)}</div>
+    <div>Δ IY: ${iy?.toFixed(2)}</div>
+    <div>Δ Spread: ${spread?.toFixed(2)}</div>
+  `;
+
+  tooltip.style.display = "block";
+  tooltip.style.left = param.point.x + 15 + "px";
+  tooltip.style.top = param.point.y + 15 + "px";
+});
 
   const uySeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 2 });
   const iySeries = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2 });
@@ -414,9 +450,9 @@ chart.timeScale().fitContent();
     const prevUy = Number(prev.underlying_yield);
     const prevIy = Number(prev.implied_yield);
 
-    const deltaUY = (uy - prevUy) * 10000;
-    const deltaIY = (iy - prevIy) * 10000;
-    const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 10000;
+    const deltaUY = (uy - prevUy) * 100;
+    const deltaIY = (iy - prevIy) * 100;
+    const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 100;
 
     const time = Math.floor(
   new Date(current.bucket_time.replace("+00:00", "Z")).getTime() / 1000
