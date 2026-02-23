@@ -240,7 +240,6 @@ let dUY = 0, dIY = 0, dSpread = 0;
 if (histJson.success && histJson.data.length >= 2) {
   const latest = histJson.data[0];
   const prev   = histJson.data[1];
-);
 
   dUY = Number(latest.underlying_yield) - Number(prev.underlying_yield);
   dIY = Number(latest.implied_yield)    - Number(prev.implied_yield);
@@ -462,12 +461,13 @@ chart.subscribeCrosshairMove(param => {
     return;
   }
 
-  const time = param.time;
+  const time = typeof param.time === "object"
+  ? param.time.timestamp
+  : param.time;
 
-  const uyPoint = globalUYData.find(d => d.time === time);
-  const iyPoint = globalIYData.find(d => d.time === time);
-  const spreadPoint = globalSpreadData.find(d => d.time === time);
-
+  const uyPoint = globalUYData.find(d => Math.abs(d.time - time) < 2);
+const iyPoint = globalIYData.find(d => Math.abs(d.time - time) < 2);
+const spreadPoint = globalSpreadData.find(d => Math.abs(d.time - time) < 2);
   const date = new Date(time * 1000);
 
   tooltip.innerHTML = `
