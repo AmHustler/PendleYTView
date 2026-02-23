@@ -353,43 +353,34 @@ if (histJson.success && histJson.data.length >= 2) {
       }
   document.getElementById("netYieldChart").innerHTML = "";
 
-   chart = LightweightCharts.createChart(
-    document.getElementById("netYieldChart"),
-    {
-      layout: {
-        background: { color: "#0b0e14" },
-        textColor: "#9ca3af",
-      },
-      grid: {
-        vertLines: { color: "#1f2937" },
-        horzLines: { color: "#1f2937" },
-      },
-      crosshair: {
-        mode: LightweightCharts.CrosshairMode.Normal,
-      },
-      rightPriceScale: {
-        borderColor: "#1f2937",
-      },
-      timeScale: {
-  borderColor: "#1f2937",
-  timeVisible: true,
-  secondsVisible: false,
-},
-      handleScroll: {
-  mouseWheel: true,
-  pressedMouseMove: true,
-  horzTouchDrag: true,
-  vertTouchDrag: false,
-},
-handleScale: {
-  axisPressedMouseMove: true,
-  mouseWheel: true,
-  pinch: true,
-},
-    }
-  );
+   const container = document.getElementById("netYieldChart");
 
-      const container = document.getElementById("netYieldChart");
+chart = LightweightCharts.createChart(container, {
+  width: container.clientWidth,
+  height: 400,
+  layout: {
+    background: { color: "#0b0e14" },
+    textColor: "#9ca3af",
+  },
+  grid: {
+    vertLines: { color: "#1f2937" },
+    horzLines: { color: "#1f2937" },
+  },
+  crosshair: {
+    mode: LightweightCharts.CrosshairMode.Normal,
+  },
+  rightPriceScale: {
+    borderColor: "#1f2937",
+  },
+  timeScale: {
+    borderColor: "#1f2937",
+    timeVisible: true,
+    secondsVisible: false,
+  },
+});
+      window.addEventListener("resize", () => {
+  chart.resize(container.clientWidth, 400);
+});
 
 const testSeries = chart.addLineSeries({ color: "red" });
 
