@@ -236,8 +236,12 @@ if (histJson.success && histJson.data.length >= 2) {
   const latest = histJson.data[0];
   const prev   = histJson.data[1];
 
-  console.log("Latest:", latest);
-console.log("Previous:", prev);
+  alert(
+  "Latest UY: " + latest.underlying_yield +
+  "\nPrev UY: " + prev.underlying_yield +
+  "\nLatest IY: " + latest.implied_yield +
+  "\nPrev IY: " + prev.implied_yield
+);
 
   dUY = Number(latest.underlying_yield) - Number(prev.underlying_yield);
   dIY = Number(latest.implied_yield)    - Number(prev.implied_yield);
