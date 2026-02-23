@@ -298,16 +298,6 @@ if (histJson.success && histJson.data.length >= 2) {
   if (range === "4h") timeframe = "hour"; // frontend aggregation
   if (range === "1d") timeframe = "day";
   if (range === "all") timeframe = "week";
-
-   const testSeries = chart.addLineSeries({ color: "red" });
-
-testSeries.setData([
-  { time: 1700000000, value: 1 },
-  { time: 1700003600, value: 3 },
-  { time: 1700007200, value: 2 },
-]);
-
-chart.timeScale().fitContent();   
       
   const res = await fetch(
     "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed",
@@ -399,18 +389,19 @@ handleScale: {
     }
   );
 
+      const testSeries = chart.addLineSeries({ color: "red" });
+
+testSeries.setData([
+  { time: 1700000000, value: 1 },
+  { time: 1700003600, value: 3 },
+  { time: 1700007200, value: 2 },
+]);
+
+chart.timeScale().fitContent();
+
       const container = document.getElementById("netYieldChart");
 
-chart.resize(
-  container.clientWidth,
-  container.clientHeight
-);
 
-setTimeout(() => {
-  chart.resize(
-    container.clientWidth,
-    container.clientHeight
-  );
 }, 100);
   const uySeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 2 });
   const iySeries = chart.addLineSeries({ color: "#f59e0b", lineWidth: 2 });
@@ -439,9 +430,9 @@ setTimeout(() => {
     const deltaSpread = ((uy - iy) - (prevUy - prevIy)) * 10000;
 
     const time = Math.floor(
-  new Date(current.bucket_time).getTime() / 1000
+  new Date(current.bucket_time.replace("+00:00", "Z")).getTime() / 1000
 );
-
+    
     uyData.push({ time, value: deltaUY });
     iyData.push({ time, value: deltaIY });
     spreadData.push({ time, value: deltaSpread });
