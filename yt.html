@@ -401,18 +401,6 @@ handleScale: {
   lineWidth: 1,
   lineStyle: LightweightCharts.LineStyle.Dotted,
 });
-      chart.subscribeCrosshairMove(param => {
-  if (!param.time) return;
-
-  const uy = param.seriesPrices.get(uySeries);
-  const iy = param.seriesPrices.get(iySeries);
-  const spread = param.seriesPrices.get(spreadSeries);
-
-  console.log("Time:", param.time);
-  console.log("Δ UY:", uy);
-  console.log("Δ IY:", iy);
-  console.log("Δ Spread:", spread);
-});
 
   const uyData = [];
   const iyData = [];
@@ -492,24 +480,6 @@ chart.priceScale("right").applyOptions({
 });
   chart.timeScale().fitContent();
     }
-    const legend = document.getElementById("legend");
-
-chart.subscribeCrosshairMove(param => {
-  if (!param.time) {
-    legend.innerHTML = "";
-    return;
-  }
-
-  const uy = param.seriesPrices.get(uySeries);
-  const iy = param.seriesPrices.get(iySeries);
-  const spread = param.seriesPrices.get(spreadSeries);
-
-  legend.innerHTML = `
-    Δ UY: ${uy !== undefined ? uy.toFixed(2) : "-"} |
-    Δ IY: ${iy !== undefined ? iy.toFixed(2) : "-"} |
-    Δ Spread: ${spread !== undefined ? spread.toFixed(2) : "-"}
-  `;
-});
 
     document.querySelectorAll(".chart-tabs button").forEach(btn => {
       btn.onclick = () => {
