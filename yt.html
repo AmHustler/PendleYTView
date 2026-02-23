@@ -359,12 +359,6 @@ console.log("Previous:", prev);
 
    const container = document.getElementById("netYieldChart");
 
-      <div style="font-size:12px;margin-bottom:6px;">
-  <span style="color:#22c55e;">● Δ Underlying</span> |
-  <span style="color:#f59e0b;">● Δ Implied</span> |
-  <span style="color:#8b5cf6;">● Δ Spread</span>
-</div>
-
 chart = LightweightCharts.createChart(container, {
   width: container.clientWidth,
   height: 400,
@@ -397,42 +391,6 @@ handleScale: {
 });
       window.addEventListener("resize", () => {
   chart.resize(container.clientWidth, 400);
-});
-      const tooltip = document.createElement("div");
-tooltip.style.position = "absolute";
-tooltip.style.display = "none";
-tooltip.style.background = "#111827";
-tooltip.style.border = "1px solid #1f2937";
-tooltip.style.padding = "8px";
-tooltip.style.fontSize = "12px";
-tooltip.style.borderRadius = "6px";
-tooltip.style.pointerEvents = "none";
-tooltip.style.color = "#e6e6e6";
-
-container.appendChild(tooltip);
-
-      chart.subscribeCrosshairMove(param => {
-  if (!param.time || !param.seriesPrices.size) {
-    tooltip.style.display = "none";
-    return;
-  }
-
-  const uy = param.seriesPrices.get(uySeries);
-  const iy = param.seriesPrices.get(iySeries);
-  const spread = param.seriesPrices.get(spreadSeries);
-
-  const date = new Date(param.time * 1000);
-
-  tooltip.innerHTML = `
-    <div>${date.toUTCString()}</div>
-    <div>Δ UY: ${uy?.toFixed(2)}</div>
-    <div>Δ IY: ${iy?.toFixed(2)}</div>
-    <div>Δ Spread: ${spread?.toFixed(2)}</div>
-  `;
-
-  tooltip.style.display = "block";
-  tooltip.style.left = param.point.x + 15 + "px";
-  tooltip.style.top = param.point.y + 15 + "px";
 });
 
   const uySeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 2 });
@@ -488,6 +446,43 @@ container.appendChild(tooltip);
       zeroSeries.setData(
   uyData.map(d => ({ time: d.time, value: 0 }))
 );
+      const tooltip = document.createElement("div");
+tooltip.style.position = "absolute";
+tooltip.style.display = "none";
+tooltip.style.background = "#111827";
+tooltip.style.border = "1px solid #1f2937";
+tooltip.style.padding = "8px";
+tooltip.style.fontSize = "12px";
+tooltip.style.borderRadius = "6px";
+tooltip.style.pointerEvents = "none";
+tooltip.style.color = "#e6e6e6";
+
+container.appendChild(tooltip);
+
+chart.subscribeCrosshairMove(param => {
+  if (!param.time || !param.seriesPrices.size) {
+    tooltip.style.display = "none";
+    return;
+  }
+
+  const uy = param.seriesPrices.get(uySeries);
+  const iy = param.seriesPrices.get(iySeries);
+  const spread = param.seriesPrices.get(spreadSeries);
+
+  const date = new Date(param.time * 1000);
+
+  tooltip.innerHTML = `
+    <div>${date.toUTCString()}</div>
+    <div style="color:#22c55e">Δ UY: ${uy?.toFixed(2)}</div>
+    <div style="color:#f59e0b">Δ IY: ${iy?.toFixed(2)}</div>
+    <div style="color:#8b5cf6">Δ Spread: ${spread?.toFixed(2)}</div>
+  `;
+
+  tooltip.style.display = "block";
+  tooltip.style.left = param.point.x + 15 + "px";
+  tooltip.style.top = param.point.y + 15 + "px";
+});
+      
 chart.priceScale("right").applyOptions({
   autoScale: true,
   scaleMargins: {
