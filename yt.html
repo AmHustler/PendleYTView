@@ -209,8 +209,12 @@ td.value.negative {
     }
 
     async function loadDetails() {
-      const res = await fetch(SNAPSHOT_API);
-      const json = await res.json();
+  alert("Calling: " + SNAPSHOT_API);
+
+  const res = await fetch(SNAPSHOT_API);
+  alert("Status: " + res.status);
+
+  const json = await res.json();
 
       if (!json.success || json.count === 0) {
         document.getElementById("loading").innerText = "YT data not found";
