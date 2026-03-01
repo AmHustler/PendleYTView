@@ -271,10 +271,14 @@ alert("Loaded API");
       }));
 
       // ---- Last updated ----
-      const latestTime = new Date(json.snapshot_time).getTime();
-      const minsAgo = Math.floor(
-        (Date.now() - latestTime) / (1000 * 60)
-      );
+      let minsAgo = "?";
+
+if (json.snapshot_time) {
+  const latestTime = new Date(json.snapshot_time).getTime();
+  minsAgo = Math.floor(
+    (Date.now() - latestTime) / (1000 * 60)
+  );
+}
       
       const select = document.getElementById("chainSelect");
       const searchInput = document.getElementById("searchInput");
