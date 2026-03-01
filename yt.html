@@ -311,7 +311,7 @@ let globalSpreadData = [];
   if (range === "all") timeframe = "week";
       
   const res = await fetch(
-    "https://monxcxbrwkjaiwaiosdg.supabase.co/functions/v1/get_yt_history_bucketed",
+    "https://pendle-proxy.vercel.app/api/history",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
