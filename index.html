@@ -249,28 +249,6 @@ tbody td {
 <script>
   const API = "https://pendle-proxy.vercel.app/api/all";
 
-  // -----------------------------
-  // Fix Android back-navigation flash
-  // -----------------------------
-  function clearSelection() {
-    if (window.getSelection) {
-      const sel = window.getSelection();
-      if (sel && sel.removeAllRanges) sel.removeAllRanges();
-    }
-  }
-
-  window.addEventListener("pageshow", function (event) {
-    if (event.persisted) {
-      clearSelection();
-
-      // tiny repaint to kill highlight frame
-      document.body.style.opacity = "0.99";
-      requestAnimationFrame(() => {
-        document.body.style.opacity = "";
-      });
-    }
-  });
-
   function shortYT(addr) {
     return addr.slice(0, 4) + "..." + addr.slice(-3);
   }
@@ -306,7 +284,7 @@ tbody td {
     table.style.display = "table";
     body.innerHTML = "";
 
-    // shimmer
+    // Shimmer
     for (let i = 0; i < 8; i++) {
       const tr = document.createElement("tr");
       tr.className = "shimmer-row";
@@ -322,18 +300,15 @@ tbody td {
       const res = await fetch(API);
       const json = await res.json();
 
-      if (!json.success) {
-        throw new Error("API failure");
-      }
+      if (!json.success) throw new Error("API failure");
 
       const rows = json.data.map(r => ({
         ...r,
         chain_id: Number(r.chain_id),
       }));
 
-      // ---- Last updated ----
+      // ---- Last Updated ----
       let minsAgo = "?";
-
       if (json.snapshot_time) {
         const latestTime = new Date(json.snapshot_time).getTime();
         minsAgo = Math.floor(
@@ -344,7 +319,7 @@ tbody td {
       const select = document.getElementById("chainSelect");
       const searchInput = document.getElementById("searchInput");
 
-      // ---- Build chain selector ----
+      // ---- Chain Selector ----
       const chainIds = [...new Set(rows.map(r => r.chain_id))]
         .sort((a, b) => a - b);
 
@@ -367,14 +342,14 @@ tbody td {
 
         let filtered = rows;
 
-        // chain filter
+        // Chain filter
         if (select.value !== "all") {
           filtered = filtered.filter(
             r => String(r.chain_id) === select.value
           );
         }
 
-        // search filter
+        // Search filter
         const searchTerm = searchInput.value.toLowerCase();
         if (searchTerm) {
           filtered = filtered.filter(r =>
@@ -397,38 +372,29 @@ tbody td {
             const tr = document.createElement("tr");
 
             tr.innerHTML = `
-              <td colspan="3" style="padding:0;">
-                <a 
-                  href="yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}"
-                  class="row-link"
-                >
-                  <div class="row-grid">
-                    <div class="token-name">
-                      ${r.yt_name ?? shortYT(r.yt_address)}
-                    </div>
-                    <div class="center ${
-                      Number(r.net_yield) >= 0
-                        ? "yield-positive"
-                        : "yield-negative"
-                    }">
-                      ${pct(r.net_yield)}
-                    </div>
-                    <div class="center apy">
-                      ${pct(r.net_apy_to_maturity)}
-                    </div>
-                  </div>
-                </a>
+              <td>${r.yt_name ?? shortYT(r.yt_address)}</td>
+              <td class="center ${
+                Number(r.net_yield) >= 0
+                  ? "yield-positive"
+                  : "yield-negative"
+              }">
+                ${pct(r.net_yield)}
+              </td>
+              <td class="center apy">
+                ${pct(r.net_apy_to_maturity)}
               </td>
             `;
 
-            // Clear selection before navigating
-            tr.addEventListener("pointerdown", clearSelection);
+            // Controlled navigation (no anchor = no flash)
+            tr.addEventListener("pointerup", () => {
+              window.location.href =
+                `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
+            });
 
             body.appendChild(tr);
           });
 
         loadingDiv.style.display = "none";
-        table.style.display = "table";
       }
 
       select.onchange = renderTable;
