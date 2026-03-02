@@ -208,10 +208,8 @@ td.value.negative {
     }
 
     async function loadDetails() {
-  alert("Calling: " + SNAPSHOT_API);
 
   const res = await fetch(SNAPSHOT_API);
-  alert("Status: " + res.status);
 
   const json = await res.json();
 
@@ -318,7 +316,7 @@ let globalSpreadData = [];
       body: JSON.stringify({
         yt_address: ytAddress,
         chain_id: chainId,
-        timeframe: timeframe,
+        timeframe: "hour",
       }),
     }
   );
