@@ -228,7 +228,7 @@ const histRes = await fetch(
     body: JSON.stringify({
       yt_address: ytAddress,
       chain_id: chainId,
-      timeframe: timeframe,
+      timeframe: "hour",
     }),
   }
 );
@@ -316,7 +316,7 @@ let globalSpreadData = [];
       body: JSON.stringify({
         yt_address: ytAddress,
         chain_id: chainId,
-        timeframe: "hour",
+        timeframe: timeframe,
       }),
     }
   );
