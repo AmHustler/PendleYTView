@@ -87,6 +87,12 @@ thead th {
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
     }
+    
+    tbody td {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+    }
 
     tbody tr:hover {
       background: rgba(255, 255, 255, 0.04);
@@ -339,11 +345,9 @@ document.getElementById("lastUpdated").innerText =
           .forEach(r => {
             const tr = document.createElement("tr");
 
-            tr.addEventListener("click", (e) => {
-  e.preventDefault();
-  window.location.assign(
-    `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`
-  );
+            tr.addEventListener("pointerdown", () => {
+  window.location.href =
+    `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
 });
 
             tr.innerHTML = `
