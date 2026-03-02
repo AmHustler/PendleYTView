@@ -252,8 +252,21 @@ for (let i = 0; i < 8; i++) {
   body.appendChild(tr);
 }
     try {
-      const res = await fetch(API);
-const json = await res.json();
+      let json;
+
+try {
+  const res = await fetch(API);
+  alert("Fetch status: " + res.status);
+
+  const text = await res.text();
+  alert("Raw response received");
+
+  json = JSON.parse(text);
+
+} catch (err) {
+  alert("Fetch error: " + err.message);
+  throw err;
+}
 
 console.log("API response:", json);
 alert("Loaded API");
