@@ -47,11 +47,14 @@
   border-collapse: collapse;
   min-width: 600px;
 }
-
-#ytTable {
-  display: block;
+    .table-wrapper {
   max-height: 75vh;
   overflow-y: auto;
+}
+
+#ytTable {
+  width: 100%;
+  border-collapse: collapse;
 }
 
     thead {
@@ -235,6 +238,7 @@ tbody td {
 
   <div id="loading" class="loading"></div>
 
+  <div class="table-wrapper">
   <table id="ytTable">
     <thead>
       <tr>
@@ -245,6 +249,7 @@ tbody td {
     </thead>
     <tbody id="ytBody"></tbody>
   </table>
+  </div>
 
 <script>
   const API = "https://pendle-proxy.vercel.app/api/all";
