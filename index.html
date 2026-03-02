@@ -103,6 +103,29 @@ tbody td {
       background: rgba(255, 255, 255, 0.04);
     }
 
+    .row-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 14px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.row-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.row-link:active {
+  background: rgba(255,255,255,0.04);
+}
+
     .center {
       text-align: right;
     }
@@ -348,35 +371,31 @@ document.getElementById("lastUpdated").innerText =
               Number(a.net_apy_to_maturity)
           )
           .forEach(r => {
+
             const tr = document.createElement("tr");
 
-            tr.addEventListener("pointerup", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-
-  // Clear any accidental selection
-  if (window.getSelection) {
-    const sel = window.getSelection();
-    if (sel && sel.removeAllRanges) {
-      sel.removeAllRanges();
-    }
-  }
-
-  setTimeout(() => {
-    window.location.href =
-      `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
-  }, 0);
-});
-
-            tr.innerHTML = `
-              <td>${r.yt_name ?? shortYT(r.yt_address)}</td>
-              <td class="center ${
-                Number(r.net_yield) >= 0
-                  ? "yield-positive"
-                  : "yield-negative"
-              }">${pct(r.net_yield)}</td>
-              <td class="center apy">${pct(r.net_apy_to_maturity)}</td>
-            `;
+tr.innerHTML = `
+  <td colspan="3" style="padding:0;">
+    <a 
+      href="yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}"
+      class="row-link"
+    >
+      <div class="row-grid">
+        <div>${r.yt_name ?? shortYT(r.yt_address)}</div>
+        <div class="center ${
+          Number(r.net_yield) >= 0
+            ? "yield-positive"
+            : "yield-negative"
+        }">
+          ${pct(r.net_yield)}
+        </div>
+        <div class="center apy">
+          ${pct(r.net_apy_to_maturity)}
+        </div>
+      </div>
+    </a>
+  </td>
+`;
 
             body.appendChild(tr);
           });
