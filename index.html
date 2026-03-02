@@ -94,6 +94,11 @@ thead th {
   -webkit-touch-callout: none;
     }
 
+    tbody tr,
+tbody td {
+  touch-action: manipulation;
+}
+
     tbody tr:hover {
       background: rgba(255, 255, 255, 0.04);
     }
@@ -345,9 +350,22 @@ document.getElementById("lastUpdated").innerText =
           .forEach(r => {
             const tr = document.createElement("tr");
 
-            tr.addEventListener("pointerdown", () => {
-  window.location.href =
-    `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
+            tr.addEventListener("pointerup", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  // Clear any accidental selection
+  if (window.getSelection) {
+    const sel = window.getSelection();
+    if (sel && sel.removeAllRanges) {
+      sel.removeAllRanges();
+    }
+  }
+
+  setTimeout(() => {
+    window.location.href =
+      `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
+  }, 0);
 });
 
             tr.innerHTML = `
