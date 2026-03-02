@@ -156,9 +156,6 @@ tbody td {
   user-select: none;
   -webkit-touch-callout: none;
     }
-.token-name span {
-  pointer-events: none;
-}
     
     /* ============================= */
 /* Premium Loading Shimmer */
@@ -249,16 +246,12 @@ tbody td {
     <tbody id="ytBody"></tbody>
   </table>
 
-  <script>
+<script>
   const API = "https://pendle-proxy.vercel.app/api/all";
 
-  // ---------------------------
-  // HARD DISABLE TEXT SELECTION
-  // ---------------------------
-  document.addEventListener("selectstart", e => e.preventDefault());
-  document.addEventListener("contextmenu", e => e.preventDefault());
-  document.addEventListener("gesturestart", e => e.preventDefault());
-
+  // -----------------------------
+  // Fix Android back-navigation flash
+  // -----------------------------
   function clearSelection() {
     if (window.getSelection) {
       const sel = window.getSelection();
@@ -266,14 +259,16 @@ tbody td {
     }
   }
 
-  // Kill restored highlight when coming back
-  window.addEventListener("pageshow", () => {
-    clearSelection();
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted) {
+      clearSelection();
 
-    // Force repaint (kills Android ghost highlight)
-    document.body.style.display = "none";
-    void document.body.offsetHeight;
-    document.body.style.display = "";
+      // tiny repaint to kill highlight frame
+      document.body.style.opacity = "0.99";
+      requestAnimationFrame(() => {
+        document.body.style.opacity = "";
+      });
+    }
   });
 
   function shortYT(addr) {
@@ -294,85 +289,160 @@ tbody td {
     9745: "Chain 9745",
   };
 
+  function debounce(fn, delay) {
+    let timer;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
   async function loadData() {
     const loadingDiv = document.getElementById("loading");
     const table = document.getElementById("ytTable");
     const body = document.getElementById("ytBody");
 
     loadingDiv.style.display = "block";
+    table.style.display = "table";
     body.innerHTML = "";
+
+    // shimmer
+    for (let i = 0; i < 8; i++) {
+      const tr = document.createElement("tr");
+      tr.className = "shimmer-row";
+      tr.innerHTML = `
+        <td><div class="shimmer-box shimmer-name"></div></td>
+        <td class="center"><div class="shimmer-box shimmer-yield"></div></td>
+        <td class="center"><div class="shimmer-box shimmer-apy"></div></td>
+      `;
+      body.appendChild(tr);
+    }
 
     try {
       const res = await fetch(API);
       const json = await res.json();
 
-      if (!json.success) throw new Error("API failure");
+      if (!json.success) {
+        throw new Error("API failure");
+      }
 
       const rows = json.data.map(r => ({
         ...r,
         chain_id: Number(r.chain_id),
       }));
 
-      const select = document.getElementById("chainSelect");
-      select.innerHTML = `<option value="all">All</option>`;
+      // ---- Last updated ----
+      let minsAgo = "?";
 
-      [...new Set(rows.map(r => r.chain_id))]
-        .sort((a,b)=>a-b)
-        .forEach(id => {
-          const opt = document.createElement("option");
-          opt.value = id;
-          opt.textContent = CHAIN_NAMES[id] ?? `Chain ${id}`;
-          select.appendChild(opt);
-        });
+      if (json.snapshot_time) {
+        const latestTime = new Date(json.snapshot_time).getTime();
+        minsAgo = Math.floor(
+          (Date.now() - latestTime) / (1000 * 60)
+        );
+      }
+
+      const select = document.getElementById("chainSelect");
+      const searchInput = document.getElementById("searchInput");
+
+      // ---- Build chain selector ----
+      const chainIds = [...new Set(rows.map(r => r.chain_id))]
+        .sort((a, b) => a - b);
+
+      select.innerHTML = "";
+
+      const allOpt = document.createElement("option");
+      allOpt.value = "all";
+      allOpt.textContent = "All";
+      select.appendChild(allOpt);
+
+      chainIds.forEach(id => {
+        const opt = document.createElement("option");
+        opt.value = String(id);
+        opt.textContent = CHAIN_NAMES[id] ?? `Chain ${id}`;
+        select.appendChild(opt);
+      });
 
       function renderTable() {
         body.innerHTML = "";
 
-        rows.forEach(r => {
+        let filtered = rows;
 
-          const tr = document.createElement("tr");
+        // chain filter
+        if (select.value !== "all") {
+          filtered = filtered.filter(
+            r => String(r.chain_id) === select.value
+          );
+        }
 
-          tr.innerHTML = `
-            <td colspan="3" style="padding:0;">
-              <a href="yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}"
-                 class="row-link">
-                <div class="row-grid">
-                  <div class="token-name"></div>
-                  <div class="center ${
-                    Number(r.net_yield) >= 0 ? "yield-positive" : "yield-negative"
-                  }">
-                    ${pct(r.net_yield)}
+        // search filter
+        const searchTerm = searchInput.value.toLowerCase();
+        if (searchTerm) {
+          filtered = filtered.filter(r =>
+            (r.yt_name || "")
+              .toLowerCase()
+              .includes(searchTerm)
+          );
+        }
+
+        document.getElementById("lastUpdated").innerText =
+          `Last updated: ${minsAgo} min ago · ${filtered.length}/${rows.length} YTs`;
+
+        filtered
+          .sort(
+            (a, b) =>
+              Number(b.net_apy_to_maturity) -
+              Number(a.net_apy_to_maturity)
+          )
+          .forEach(r => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+              <td colspan="3" style="padding:0;">
+                <a 
+                  href="yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}"
+                  class="row-link"
+                >
+                  <div class="row-grid">
+                    <div class="token-name">
+                      ${r.yt_name ?? shortYT(r.yt_address)}
+                    </div>
+                    <div class="center ${
+                      Number(r.net_yield) >= 0
+                        ? "yield-positive"
+                        : "yield-negative"
+                    }">
+                      ${pct(r.net_yield)}
+                    </div>
+                    <div class="center apy">
+                      ${pct(r.net_apy_to_maturity)}
+                    </div>
                   </div>
-                  <div class="center apy">
-                    ${pct(r.net_apy_to_maturity)}
-                  </div>
-                </div>
-              </a>
-            </td>
-          `;
+                </a>
+              </td>
+            `;
 
-          const nameEl = tr.querySelector(".token-name");
-          nameEl.textContent = r.yt_name ?? shortYT(r.yt_address);
+            // Clear selection before navigating
+            tr.addEventListener("pointerdown", clearSelection);
 
-          // Kill selection before navigation
-          tr.addEventListener("pointerdown", clearSelection);
-          tr.addEventListener("pointerup", clearSelection);
-
-          body.appendChild(tr);
-        });
+            body.appendChild(tr);
+          });
 
         loadingDiv.style.display = "none";
         table.style.display = "table";
       }
 
+      select.onchange = renderTable;
+      searchInput.oninput = debounce(renderTable, 300);
+
       renderTable();
 
     } catch (e) {
-      loadingDiv.innerText = "Failed to load data";
+      document.getElementById("loading").innerText =
+        "Failed to load data";
     }
   }
 
   loadData();
-  </script> 
+</script>
 </body>
 </html>
