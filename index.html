@@ -249,12 +249,14 @@ tbody td {
 <script>
   const API = "https://pendle-proxy.vercel.app/api/all";
 
-  // Disable BFCache restore (fixes Android tap flash)
-window.addEventListener("pageshow", function (event) {
-  if (event.persisted) {
-    window.location.reload();
-  }
-});
+  // -----------------------------
+  // Disable BFCache (no flash)
+  // -----------------------------
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  });
 
   function shortYT(addr) {
     return addr.slice(0, 4) + "..." + addr.slice(-3);
@@ -287,20 +289,25 @@ window.addEventListener("pageshow", function (event) {
     const table = document.getElementById("ytTable");
     const body = document.getElementById("ytBody");
 
-    loadingDiv.style.display = "block";
-    table.style.display = "table";
+    const isBackNavigation = sessionStorage.getItem("scrollY") !== null;
+
     body.innerHTML = "";
 
-    // Shimmer
-    for (let i = 0; i < 8; i++) {
-      const tr = document.createElement("tr");
-      tr.className = "shimmer-row";
-      tr.innerHTML = `
-        <td><div class="shimmer-box shimmer-name"></div></td>
-        <td class="center"><div class="shimmer-box shimmer-yield"></div></td>
-        <td class="center"><div class="shimmer-box shimmer-apy"></div></td>
-      `;
-      body.appendChild(tr);
+    if (!isBackNavigation) {
+      // Only show shimmer on fresh load
+      loadingDiv.style.display = "block";
+      for (let i = 0; i < 8; i++) {
+        const tr = document.createElement("tr");
+        tr.className = "shimmer-row";
+        tr.innerHTML = `
+          <td><div class="shimmer-box shimmer-name"></div></td>
+          <td class="center"><div class="shimmer-box shimmer-yield"></div></td>
+          <td class="center"><div class="shimmer-box shimmer-apy"></div></td>
+        `;
+        body.appendChild(tr);
+      }
+    } else {
+      loadingDiv.style.display = "none";
     }
 
     try {
@@ -314,7 +321,6 @@ window.addEventListener("pageshow", function (event) {
         chain_id: Number(r.chain_id),
       }));
 
-      // ---- Last Updated ----
       let minsAgo = "?";
       if (json.snapshot_time) {
         const latestTime = new Date(json.snapshot_time).getTime();
@@ -326,7 +332,6 @@ window.addEventListener("pageshow", function (event) {
       const select = document.getElementById("chainSelect");
       const searchInput = document.getElementById("searchInput");
 
-      // ---- Chain Selector ----
       const chainIds = [...new Set(rows.map(r => r.chain_id))]
         .sort((a, b) => a - b);
 
@@ -349,14 +354,12 @@ window.addEventListener("pageshow", function (event) {
 
         let filtered = rows;
 
-        // Chain filter
         if (select.value !== "all") {
           filtered = filtered.filter(
             r => String(r.chain_id) === select.value
           );
         }
 
-        // Search filter
         const searchTerm = searchInput.value.toLowerCase();
         if (searchTerm) {
           filtered = filtered.filter(r =>
@@ -392,8 +395,9 @@ window.addEventListener("pageshow", function (event) {
               </td>
             `;
 
-            // Controlled navigation (no anchor = no flash)
             tr.addEventListener("pointerup", () => {
+              // Save scroll before leaving
+              sessionStorage.setItem("scrollY", window.scrollY);
               window.location.href =
                 `yt.html?chain_id=${r.chain_id}&yt_address=${r.yt_address}`;
             });
@@ -402,6 +406,13 @@ window.addEventListener("pageshow", function (event) {
           });
 
         loadingDiv.style.display = "none";
+
+        // Restore scroll position
+        const savedScroll = sessionStorage.getItem("scrollY");
+        if (savedScroll !== null) {
+          window.scrollTo(0, parseInt(savedScroll, 10));
+          sessionStorage.removeItem("scrollY");
+        }
       }
 
       select.onchange = renderTable;
